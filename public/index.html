@@ -796,6 +796,19 @@ code{background:var(--s3);padding:1px 5px;border-radius:4px;font-size:12px;font-
 
 <div class="toast" id="toast"></div>
 <div id="imgLightbox" onclick="closeLightbox()">
+
+<!-- UPLOAD PROGRESS OVERLAY -->
+<div id="upload-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#fff;border-radius:18px;padding:32px 40px;text-align:center;min-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.3)">
+    <div id="upload-icon" style="font-size:40px;margin-bottom:12px">📤</div>
+    <div id="upload-title" style="font-size:18px;font-weight:800;color:#1a1a2e;margin-bottom:6px">Saving Product...</div>
+    <div id="upload-sub" style="font-size:13px;color:#5a6072;margin-bottom:18px">Uploading to server, please wait</div>
+    <div style="background:#f0f2f8;border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px">
+      <div id="upload-bar" style="height:100%;background:linear-gradient(90deg,#1a1a2e,#e94560);border-radius:99px;width:0%;transition:width 0.3s ease"></div>
+    </div>
+    <div id="upload-pct" style="font-size:12px;color:#9aa0b4">0%</div>
+  </div>
+</div>
   <button class="lb-close" onclick="closeLightbox()">✕</button>
   <img id="lbImg" src="" alt="">
 </div>
@@ -846,11 +859,13 @@ function fbSaveOrder(order){
   var r=fbRef('orders/'+order.id); if(!r) return;
   r.set(order).catch(function(e){ console.warn('FB write error:',e); });
 }
-function fbSyncProducts(){
-  if(!fbDB){ setTimeout(fbSyncProducts, 500); return; }
+function fbSyncProducts(onDone){
+  if(!fbDB){ setTimeout(function(){ fbSyncProducts(onDone); }, 500); return; }
   var obj={};
   ST.products.forEach(function(p){ obj[p.id]=p; });
-  fbDB.ref('products').set(obj).catch(function(e){ console.warn('FB products sync error:',e); });
+  fbDB.ref('products').set(obj)
+    .then(function(){ if(onDone) onDone(true); })
+    .catch(function(e){ console.warn('FB products sync error:',e); if(onDone) onDone(false); });
 }
 function fbUpdateOrder(id, data){
   var r=fbRef('orders/'+id); if(!r) return;
@@ -1368,6 +1383,42 @@ function checkCustomCat(sel){
   wrap.style.display=sel.value==='__new__'?'block':'none';
 }
 
+function showUploadOverlay(){
+  var ov=document.getElementById('upload-overlay');
+  ov.style.display='flex';
+  document.getElementById('upload-icon').textContent='📤';
+  document.getElementById('upload-title').textContent='Saving Product...';
+  document.getElementById('upload-sub').textContent='Uploading to server, please wait';
+  document.getElementById('upload-bar').style.width='0%';
+  document.getElementById('upload-pct').textContent='0%';
+  // Animate progress bar to 85% while waiting for Firebase
+  var pct=0;
+  var iv=setInterval(function(){
+    pct+=Math.random()*12;
+    if(pct>85) pct=85;
+    document.getElementById('upload-bar').style.width=pct+'%';
+    document.getElementById('upload-pct').textContent=Math.round(pct)+'%';
+  },200);
+  return iv;
+}
+function finishUploadOverlay(iv, success){
+  clearInterval(iv);
+  document.getElementById('upload-bar').style.width='100%';
+  document.getElementById('upload-pct').textContent='100%';
+  if(success){
+    document.getElementById('upload-icon').textContent='✅';
+    document.getElementById('upload-title').textContent='Product Saved!';
+    document.getElementById('upload-sub').textContent='Now visible to all buyers';
+  } else {
+    document.getElementById('upload-icon').textContent='⚠️';
+    document.getElementById('upload-title').textContent='Saved Locally';
+    document.getElementById('upload-sub').textContent='Will sync when connection improves';
+  }
+  setTimeout(function(){
+    document.getElementById('upload-overlay').style.display='none';
+  },1500);
+}
+
 function addProd(){
   var n=document.getElementById('np-n').value.trim();
   var c=document.getElementById('np-c').value.trim();
@@ -1394,14 +1445,18 @@ function addProd(){
   }
   var prod={id:'p'+Date.now(),name:n,code:c,cat:cat,pack:pk,mrp:m,dp:dp,desc:d,videoUrl:vid,em:CE[cat]||'📦',ik:null};
   if(newProdImg) prod.customImg=newProdImg;
-  ST.products.unshift(prod); sd(); fbSyncProducts();
-  resetAddForm();
-  renderManage();
-  toast('Product added ✓','ok');
-  setTimeout(function(){
-    var ml=document.getElementById('mlist');
-    if(ml) ml.scrollIntoView({behavior:'smooth',block:'start'});
-  },200);
+  ST.products.unshift(prod); sd();
+  // Show upload progress overlay, wait for Firebase confirmation
+  var iv=showUploadOverlay();
+  fbSyncProducts(function(success){
+    finishUploadOverlay(iv, success);
+    resetAddForm();
+    renderManage();
+    setTimeout(function(){
+      var ml=document.getElementById('mlist');
+      if(ml) ml.scrollIntoView({behavior:'smooth',block:'start'});
+    },200);
+  });
 }
 
 function resetAddForm(){
