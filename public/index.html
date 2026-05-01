@@ -869,12 +869,26 @@ function fbStartListening(){
   fbListener = r.on('value', function(snap){
     var data=snap.val();
     var fbOrders = data ? Object.values(data) : [];
-    // Sort newest first
     fbOrders.sort(function(a,b){ return (b.id||'').localeCompare(a.id||''); });
     ST.orders = fbOrders;
     sd();
     if(document.getElementById('p-admin').classList.contains('on')){
       renderStats(); renderOrders();
+    }
+  });
+  // Admin also listens to products so product list updates in real time
+  fbDB.ref('products').on('value', function(snap){
+    var data=snap.val();
+    if(data){
+      var prods=Object.values(data);
+      // Only update if changed (avoid overwriting during current add)
+      if(prods.length !== ST.products.length){
+        ST.products=prods;
+        sd();
+      }
+    }
+    if(document.getElementById('ap-products') && document.getElementById('ap-products').classList.contains('on')){
+      renderManage();
     }
   });
 }
@@ -1391,48 +1405,24 @@ function addProd(){
 }
 
 function resetAddForm(){
-  // Clear all text inputs
-  var ids=['np-n','np-c','np-m','np-dp','np-pk','np-d','np-vid'];
-  for(var i=0;i<ids.length;i++){
-    var el=document.getElementById(ids[i]);
-    if(el){ el.value=''; }
-  }
-  // Reset category select - rebuild it fresh
-  var catSel=document.getElementById('np-cat');
-  if(catSel){
-    // Remove any custom options added during session, keep only standard ones
-    var standard=['Pens','Colouring Books','Notebooks','Notes & Pads','Gift Sets','Pencils','Canvas Boards','Metal Pens','Colors & Art','Stationery','Other','__new__'];
-    for(var j=catSel.options.length-1;j>=0;j--){
-      if(standard.indexOf(catSel.options[j].value)===-1) catSel.remove(j);
-    }
-    catSel.selectedIndex=0;
-  }
-  // Hide custom cat input
-  var nc=document.getElementById('np-newcat-wrap');
-  if(nc) nc.style.display='none';
-  var nci=document.getElementById('np-newcat');
-  if(nci) nci.value='';
-  // Reset photo - remove event then reset to avoid re-triggering
-  newProdImg=null;
-  var prev=document.getElementById('pu-preview');
-  if(prev) prev.src='';
-  var prevWrap=document.getElementById('pu-preview-wrap');
-  if(prevWrap) prevWrap.style.display='none';
-  var puArea=document.getElementById('pu-area');
-  if(puArea) puArea.style.display='flex';
-  // Reset file inputs by replacing them (most reliable cross-browser method)
-  var pi=document.getElementById('pu-input');
-  if(pi){
-    var newPi=pi.cloneNode(true);
-    pi.parentNode.replaceChild(newPi,pi);
-    newPi.addEventListener('change',handlePhotoUpload);
-  }
-  var pi2=document.getElementById('pu-input2');
-  if(pi2){
-    var newPi2=pi2.cloneNode(true);
-    pi2.parentNode.replaceChild(newPi2,pi2);
-    newPi2.addEventListener('change',handlePhotoChange);
-  }
+  try {
+    document.getElementById('np-n').value='';
+    document.getElementById('np-c').value='';
+    document.getElementById('np-m').value='';
+    document.getElementById('np-dp').value='';
+    document.getElementById('np-pk').value='';
+    document.getElementById('np-d').value='';
+    document.getElementById('np-vid').value='';
+    document.getElementById('np-cat').selectedIndex=0;
+    document.getElementById('np-newcat-wrap').style.display='none';
+    document.getElementById('np-newcat').value='';
+    newProdImg=null;
+    document.getElementById('pu-preview').src='';
+    document.getElementById('pu-preview-wrap').style.display='none';
+    document.getElementById('pu-area').style.display='flex';
+    document.getElementById('pu-input').value='';
+    document.getElementById('pu-input2').value='';
+  } catch(e){ console.warn('resetAddForm error:',e); }
 }
 
 function clearAllProducts(){
