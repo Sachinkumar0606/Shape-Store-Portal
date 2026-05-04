@@ -1,178 +1,420 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Shape Store Portal</title>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
-    
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .header { background: #1a1a2e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 24px; }
-    .status { padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-    .status.connected { background: #22c55e; color: white; }
-    .status.disconnected { background: #ef4444; color: white; }
-    
-    .role-select { padding: 10px; font-size: 16px; border-radius: 4px; border: 2px solid #ddd; cursor: pointer; }
-    
-    .main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .panel h2 { margin-bottom: 20px; color: #1a1a2e; font-size: 18px; }
-    
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 12px; font-weight: bold; color: #666; margin-bottom: 6px; text-transform: uppercase; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 4px; font-size: 14px; }
-    .form-group input:focus { outline: none; border-color: #1a1a2e; }
-    
-    button { padding: 12px 20px; background: #1a1a2e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
-    button:hover { background: #0f3460; }
-    button:active { opacity: 0.8; }
-    
-    .products-list { margin-top: 20px; }
-    .product-card { background: #f9f9f9; padding: 16px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #1a1a2e; }
-    .product-card h4 { color: #1a1a2e; margin-bottom: 6px; }
-    .product-card p { font-size: 13px; color: #666; margin-bottom: 4px; }
-    .product-card .code { font-family: monospace; background: #e0e0e0; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
-    
-    .empty { text-align: center; padding: 40px 20px; color: #999; }
-    .empty-icon { font-size: 48px; margin-bottom: 10px; }
-    
-    .buyer-panel { grid-column: 1 / -1; }
-    .buyers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-    
-    .toast { position: fixed; bottom: 20px; right: 20px; background: #1a1a2e; color: white; padding: 16px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; }
-    
-    @media (max-width: 768px) {
-      .main { grid-template-columns: 1fr; }
-      .header { flex-direction: column; gap: 10px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a2e">
+<title>Shape Trade Portal</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<style>
+:root{
+  --b:#1a1a2e;--b2:#0f3460;--a:#e94560;--g:#22c55e;
+  --s:#fff;--s2:#f8f9fc;--s3:#f0f2f8;
+  --br:#e2e6f0;--t:#1a1a2e;--t2:#5a6072;--t3:#9aa0b4;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--s2);color:var(--t);font-size:15px}
+
+/* PAGES */
+.pg{display:none;min-height:100vh;flex-direction:column}
+.pg.on{display:flex}
+
+/* LOGIN */
+#p-login{
+  background:linear-gradient(135deg,#1a1a2e,#16213e 50%,#0f3460);
+  align-items:center;justify-content:center;
+  padding:24px;min-height:100vh;
+}
+.lbox{
+  background:#fff;border-radius:20px;
+  padding:36px 28px;width:100%;max-width:390px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35);
+}
+.llogo{text-align:center;margin-bottom:28px}
+.lmark{
+  width:58px;height:58px;
+  background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  border-radius:15px;display:inline-flex;align-items:center;justify-content:center;
+  margin-bottom:12px;box-shadow:0 6px 18px rgba(26,26,46,.3);
+}
+.lmark b{font-size:24px;color:#fff;font-weight:900}
+.llogo h2{font-size:20px;font-weight:800;color:var(--b)}
+.llogo p{font-size:13px;color:var(--t2);margin-top:3px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--t2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.fg input{
+  width:100%;padding:14px 15px;
+  border:2px solid var(--br);border-radius:11px;
+  font-size:16px;color:var(--t);background:var(--s2);
+  -webkit-appearance:none;outline:none;
+}
+.fg input:focus{border-color:var(--b);background:#fff}
+.lbtn{
+  width:100%;padding:15px;margin-top:4px;
+  background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  color:#fff;border:none;border-radius:11px;
+  font-size:16px;font-weight:700;cursor:pointer;
+  -webkit-appearance:none;
+}
+.lbtn:active{opacity:.85}
+.lerr{color:var(--a);font-size:13px;text-align:center;margin-top:10px;min-height:18px;font-weight:500}
+.lhint{margin-top:14px;background:var(--s3);border-radius:10px;padding:12px;font-size:12px;color:var(--t2);line-height:1.9}
+.lhint b{color:var(--b)}
+
+/* ADMIN HEADER */
+.ah{
+  background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  color:#fff;padding:16px 15px;display:flex;align-items:center;justify-content:space-between;
+}
+.ah-left{display:flex;align-items:center;gap:12px}
+.ah-mark{width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px}
+.ah-title{font-size:16px;font-weight:800}
+.ah-welcome{font-size:12px;opacity:0.8}
+.ah-right{display:flex;align-items:center;gap:10px}
+.status-light{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.status-text{font-size:11px;color:#22c55e;font-weight:600}
+.logout-btn{background:rgba(255,255,255,0.2);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.logout-btn:hover{background:rgba(255,255,255,0.3)}
+
+/* ADMIN NAV TABS */
+.admin-nav{
+  background:#fff;border-bottom:1px solid var(--br);
+  display:flex;gap:2px;padding:0 15px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.admin-tab{
+  padding:12px 16px;border:none;background:none;
+  font-size:13px;font-weight:600;color:var(--t2);
+  cursor:pointer;border-bottom:3px solid transparent;
+  white-space:nowrap;
+}
+.admin-tab.on{color:var(--b);border-bottom-color:var(--a)}
+
+/* ADMIN CONTENT */
+.admin-content{flex:1;overflow-y:auto;padding:16px 15px}
+
+.fbox{
+  background:#fff;border-radius:12px;padding:16px;
+  margin-bottom:16px;border:1px solid var(--br);
+}
+.fbox h4{font-size:14px;font-weight:700;color:var(--b);margin-bottom:12px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.frow.full{grid-template-columns:1fr}
+.fg2{margin-bottom:0}
+.fg2 label{font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px;text-transform:uppercase}
+.fg2 input,.fg2 select{
+  width:100%;padding:10px;border:2px solid var(--br);border-radius:8px;
+  font-size:13px;background:var(--s2);-webkit-appearance:none;
+}
+.fg2 input:focus,.fg2 select:focus{outline:none;border-color:var(--b);background:#fff}
+
+.sub-btn{
+  width:100%;padding:12px;background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;
+  cursor:pointer;margin-top:8px;-webkit-appearance:none;
+}
+.sub-btn:active{opacity:0.8}
+
+.prod-card{
+  background:var(--s2);border:1px solid var(--br);border-radius:10px;
+  padding:12px;margin-bottom:12px;display:flex;gap:12px;
+}
+.prod-img{width:60px;height:60px;background:#ddd;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.prod-info{flex:1}
+.prod-name{font-size:13px;font-weight:700;color:var(--b);margin-bottom:4px}
+.prod-code{font-size:11px;font-family:monospace;background:#fff;padding:2px 6px;border-radius:4px;display:inline-block;margin-bottom:4px;color:var(--t3)}
+.prod-cat{font-size:11px;color:var(--t2)}
+.prod-actions{display:flex;gap:6px}
+.prod-del{background:var(--a);color:#fff;border:none;padding:6px 10px;border-radius:4px;font-size:11px;cursor:pointer}
+
+/* BUYER HEADER */
+.bh{
+  background:#fff;height:58px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 15px;border-bottom:1px solid var(--br);
+  position:sticky;top:0;z-index:50;
+  box-shadow:0 2px 8px rgba(26,26,46,.07);
+}
+.bh-logo{display:flex;align-items:center;gap:8px}
+.bh-mark{
+  width:32px;height:32px;background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+}
+.bh-mark b{font-size:14px;color:#fff;font-weight:900}
+.bh-title{font-size:17px;font-weight:800;color:var(--b)}
+.bh-r{display:flex;align-items:center;gap:9px}
+.cart-btn{
+  background:var(--b);color:#fff;border:none;
+  border-radius:9px;padding:8px 13px;
+  font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+  -webkit-appearance:none;position:relative;
+}
+.cart-btn:active{opacity:.8}
+.cbadge{
+  background:var(--a);color:#fff;
+  border-radius:20px;padding:1px 6px;
+  font-size:11px;font-weight:800;display:none;
+}
+.cbadge.on{display:inline-block}
+
+.nbar{
+  background:linear-gradient(135deg,#1a1a2e,#0f3460);
+  color:#fff;padding:10px 15px;font-size:14px;
+  display:flex;align-items:center;gap:8px;
+}
+
+.srow{padding:12px 15px;background:#fff;border-bottom:1px solid var(--br)}
+.swrap{position:relative}
+.swrap input{
+  width:100%;padding:10px 14px 10px 36px;
+  border:2px solid var(--br);border-radius:10px;
+  font-size:16px;background:var(--s2);
+  -webkit-appearance:none;outline:none;
+}
+.swrap input:focus{border-color:var(--b)}
+
+.cats{
+  display:flex;gap:7px;overflow-x:auto;padding:11px 15px;
+  background:#fff;border-bottom:1px solid var(--br);
+  -webkit-overflow-scrolling:touch;
+}
+.cat{
+  padding:7px 12px;background:var(--s2);border:2px solid var(--br);
+  border-radius:20px;font-size:12px;color:var(--t2);cursor:pointer;
+  white-space:nowrap;-webkit-appearance:none;font-weight:600;
+}
+.cat.on{background:var(--b);color:#fff;border-color:var(--b)}
+
+.pgrid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:12px;padding:12px 15px;
+}
+.pc{
+  background:#fff;border-radius:12px;overflow:hidden;
+  border:1px solid var(--br);cursor:pointer;transition:transform 0.2s;
+}
+.pc:active{transform:scale(0.98)}
+.pci{position:relative;aspect-ratio:1;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:40px}
+.pci img{width:100%;height:100%;object-fit:cover}
+.pcb-tag{
+  position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);
+  color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;
+}
+.pcd{padding:8px}
+.pcn{font-size:12px;font-weight:700;color:var(--b);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcc{font-size:10px;color:var(--t3);margin-bottom:4px}
+.pcp{font-size:12px;font-weight:700;color:var(--a);margin-bottom:2px}
+
+.ce{text-align:center;padding:40px 20px;color:#999}
+.ei{font-size:48px;margin-bottom:10px}
+
+.toast{
+  position:fixed;bottom:20px;right:20px;background:var(--b);color:#fff;
+  padding:14px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  z-index:1000;font-size:13px;font-weight:600;
+}
+</style>
 </head>
 <body>
 
-<div class="container">
-  <div class="header">
-    <div>
-      <h1>📦 Shape Store Portal</h1>
-      <p style="font-size: 13px; opacity: 0.8; margin-top: 4px;">Real-time Product Management</p>
+<!-- LOGIN -->
+<div id="p-login" class="pg on">
+  <div class="lbox">
+    <div class="llogo">
+      <div class="lmark"><b>S</b></div>
+      <h2>Shape Portal</h2>
+      <p>Real-time Product Sync</p>
     </div>
-    <div style="display: flex; gap: 16px; align-items: center;">
-      <select id="roleSelect" class="role-select" onchange="switchRole()">
-        <option value="admin">👨‍💼 Admin</option>
-        <option value="buyer">👤 Buyer</option>
-      </select>
-      <div id="status" class="status disconnected">Connecting...</div>
+    <div class="fg">
+      <label>Username</label>
+      <input type="text" id="uid" placeholder="admin or buyer1" onkeypress="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" id="lpw" placeholder="password" onkeypress="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="lbtn" onclick="doLogin()">Login</button>
+    <div class="lerr" id="lerr"></div>
+    <div class="lhint">
+      <b>Demo accounts:</b><br>
+      Admin: <code>admin</code> / <code>admin</code><br>
+      Buyer: <code>buyer1</code> / <code>buyer1</code>
     </div>
   </div>
+</div>
 
-  <div class="main">
-    <!-- ADMIN PANEL -->
-    <div id="adminPanel" class="panel">
-      <h2>➕ Add New Product</h2>
-      
-      <div class="form-group">
-        <label>Product Name *</label>
-        <input type="text" id="prodName" placeholder="e.g. Ballpoint Pen">
-      </div>
-      
-      <div class="form-group">
-        <label>Product Code *</label>
-        <input type="text" id="prodCode" placeholder="e.g. PEN-001">
-      </div>
-      
-      <div class="form-group">
-        <label>Price</label>
-        <input type="text" id="prodPrice" placeholder="e.g. ₹50/-">
-      </div>
-      
-      <div class="form-group">
-        <label>Category</label>
-        <select id="prodCategory">
-          <option>Pens</option>
-          <option>Pencils</option>
-          <option>Notebooks</option>
-          <option>Markers</option>
-        </select>
-      </div>
-      
-      <button onclick="addProduct()" style="width: 100%; margin-bottom: 16px;">✨ Add Product</button>
-      
-      <h2 style="margin-top: 30px;">All Products (Admin View)</h2>
-      <div id="adminProducts" class="products-list">
-        <div class="empty"><div class="empty-icon">📦</div>No products yet</div>
+<!-- ADMIN -->
+<div id="p-admin" class="pg" style="flex-direction:column">
+  <div class="ah">
+    <div class="ah-left">
+      <div class="ah-mark">S</div>
+      <div>
+        <div class="ah-title">Shape Admin</div>
+        <div class="ah-welcome" id="awelcome">Welcome, Admin</div>
       </div>
     </div>
-
-    <!-- BUYER PANEL -->
-    <div id="buyerPanel" class="panel" style="display: none;">
-      <h2>🛍️ Available Products</h2>
-      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">Products available for order</p>
-      <div id="buyerProducts" class="products-list">
-        <div class="empty"><div class="empty-icon">📦</div>No products available</div>
+    <div class="ah-right">
+      <div style="text-align:right">
+        <div class="status-light"></div>
+        <div class="status-text">Live Connected</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  
+  <div class="admin-nav">
+    <button class="admin-tab on" onclick="showAdminTab('products')">📦 Products</button>
+  </div>
+  
+  <div class="admin-content">
+    <div id="products-tab" class="admin-tab-content">
+      <div class="fbox">
+        <h4>➕ Add New Product</h4>
+        <div class="frow">
+          <div class="fg2">
+            <label>Product Name</label>
+            <input type="text" id="np-n" placeholder="e.g. Ballpoint Pen">
+          </div>
+          <div class="fg2">
+            <label>Product Code</label>
+            <input type="text" id="np-c" placeholder="e.g. PEN-001">
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg2">
+            <label>Price</label>
+            <input type="text" id="np-m" placeholder="e.g. ₹50/-">
+          </div>
+          <div class="fg2">
+            <label>Category</label>
+            <select id="np-cat">
+              <option>Pens</option>
+              <option>Pencils</option>
+              <option>Notebooks</option>
+              <option>Markers</option>
+            </select>
+          </div>
+        </div>
+        <button class="sub-btn" onclick="addProd()">Add Product</button>
+      </div>
+      
+      <div class="fbox">
+        <h4>📋 All Products</h4>
+        <div id="mlist"></div>
       </div>
     </div>
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- BUYER -->
+<div id="p-buyer" class="pg" style="flex-direction:column">
+  <div class="bh">
+    <div class="bh-logo">
+      <div class="bh-mark"><b>S</b></div>
+      <div class="bh-title">Shape Store</div>
+    </div>
+    <div class="bh-r">
+      <button class="so-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  
+  <div class="nbar">
+    👋 Welcome, <b id="bname">Buyer</b> — tap any product to order
+  </div>
+  
+  <div class="srow">
+    <div class="swrap">
+      <span class="sico">🔍</span>
+      <input type="text" id="srch" placeholder="Search products..." onkeyup="filterProds()">
+    </div>
+  </div>
+  
+  <div class="cats">
+    <button class="cat on" onclick="setCat('All')">📦 All</button>
+    <button class="cat" onclick="setCat('Pens')">🖊️ Pens</button>
+    <button class="cat" onclick="setCat('Pencils')">✏️ Pencils</button>
+    <button class="cat" onclick="setCat('Notebooks')">📓 Notebooks</button>
+  </div>
+  
+  <div style="flex:1;overflow-y:auto">
+    <div class="pgrid" id="pgrid">
+      <div class="ce"><div class="ei">🛍️</div><p>No products yet</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" style="display:none"></div>
 
 <script>
 // ===== SOCKET.IO CONNECTION =====
 const socket = io();
-
 let products = [];
-let currentRole = 'admin';
+let CU = null;
+let currentCat = 'All';
 
-// Connection events
 socket.on('connect', () => {
-  console.log('✓ Connected to server');
-  updateStatus(true);
-  showToast('Connected to server!', 'success');
+  console.log('✓ Connected');
 });
 
-socket.on('disconnect', () => {
-  console.log('✗ Disconnected from server');
-  updateStatus(false);
-  showToast('Disconnected from server', 'error');
-});
-
-// Load products when they update
 socket.on('load-products', (data) => {
   products = data.products || [];
   console.log('✓ Loaded', products.length, 'products');
-  renderProducts();
+  if (CU && CU.role === 'buyer') renderProds();
+  if (CU && CU.role === 'admin') renderManage();
 });
 
-// ===== UI FUNCTIONS =====
-function switchRole() {
-  currentRole = document.getElementById('roleSelect').value;
-  const adminPanel = document.getElementById('adminPanel');
-  const buyerPanel = document.getElementById('buyerPanel');
+// ===== LOGIN/LOGOUT =====
+function doLogin(){
+  const id = document.getElementById('uid').value.trim();
+  const pw = document.getElementById('lpw').value;
   
-  if (currentRole === 'admin') {
-    adminPanel.style.display = 'block';
-    buyerPanel.style.display = 'none';
+  if (id === 'admin' && pw === 'admin') {
+    CU = {id, role: 'admin', name: 'Admin'};
+    showPg('p-admin');
+    document.getElementById('awelcome').textContent = 'Welcome, ' + CU.name;
+    renderManage();
+  } else if (id === 'buyer1' && pw === 'buyer1') {
+    CU = {id, role: 'buyer', name: 'Demo Buyer'};
+    showPg('p-buyer');
+    document.getElementById('bname').textContent = CU.name;
+    renderProds();
   } else {
-    adminPanel.style.display = 'none';
-    buyerPanel.style.display = 'block';
-  }
-}
-
-function addProduct() {
-  const name = document.getElementById('prodName').value.trim();
-  const code = document.getElementById('prodCode').value.trim();
-  const price = document.getElementById('prodPrice').value.trim();
-  const category = document.getElementById('prodCategory').value;
-  
-  if (!name || !code) {
-    showToast('Please fill in Name and Code', 'error');
+    document.getElementById('lerr').textContent = '❌ Wrong username or password';
     return;
   }
   
-  // Check for duplicate code
+  document.getElementById('uid').value = '';
+  document.getElementById('lpw').value = '';
+}
+
+function doLogout(){
+  CU = null;
+  showPg('p-login');
+}
+
+function showPg(id){
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+// ===== ADMIN =====
+function addProd(){
+  const name = document.getElementById('np-n').value.trim();
+  const code = document.getElementById('np-c').value.trim();
+  const price = document.getElementById('np-m').value.trim();
+  const cat = document.getElementById('np-cat').value;
+  
+  if (!name || !code) {
+    showToast('Name and code required', 'error');
+    return;
+  }
+  
   if (products.find(p => p.code.toLowerCase() === code.toLowerCase())) {
     showToast('Code already exists!', 'error');
     return;
@@ -180,85 +422,87 @@ function addProduct() {
   
   const product = {
     id: 'p' + Date.now(),
-    name,
-    code,
-    price,
-    category,
-    createdAt: new Date().toLocaleString()
+    name, code, price, cat,
+    em: '📦'
   };
   
-  // Send to server via Socket.io
   socket.emit('add-product', product);
   
   // Clear form
-  document.getElementById('prodName').value = '';
-  document.getElementById('prodCode').value = '';
-  document.getElementById('prodPrice').value = '';
-  document.getElementById('prodCategory').selectedIndex = 0;
+  document.getElementById('np-n').value = '';
+  document.getElementById('np-c').value = '';
+  document.getElementById('np-m').value = '';
+  document.getElementById('np-cat').selectedIndex = 0;
   
   showToast('Product added!', 'success');
 }
 
-function renderProducts() {
-  // Admin view - all products with edit/delete
-  const adminHtml = products.length === 0 
-    ? '<div class="empty"><div class="empty-icon">📦</div>No products yet</div>'
+function renderManage(){
+  const html = products.length === 0 
+    ? '<div class="ce"><div class="ei">📦</div><p>No products yet</p></div>'
     : products.map(p => `
-      <div class="product-card">
-        <h4>${p.name}</h4>
-        <p>Code: <span class="code">${p.code}</span></p>
-        <p>Price: ${p.price || '—'}</p>
-        <p>Category: ${p.category}</p>
-        <p style="font-size: 11px; color: #999;">Added: ${p.createdAt}</p>
+      <div class="prod-card">
+        <div class="prod-img">${p.em || '📦'}</div>
+        <div class="prod-info">
+          <div class="prod-name">${p.name}</div>
+          <span class="prod-code">${p.code}</span>
+          <div class="prod-cat">${p.cat} • ${p.price || '—'}</div>
+        </div>
       </div>
     `).join('');
   
-  document.getElementById('adminProducts').innerHTML = adminHtml;
+  document.getElementById('mlist').innerHTML = html;
+}
+
+function showAdminTab(tab){
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('on'));
+  event.target.classList.add('on');
+}
+
+// ===== BUYER =====
+function renderProds(){
+  const q = document.getElementById('srch').value.toLowerCase();
+  let ps = products;
+  if (currentCat !== 'All') ps = ps.filter(p => p.cat === currentCat);
+  if (q) ps = ps.filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
   
-  // Buyer view - simpler display
-  const buyerHtml = products.length === 0
-    ? '<div class="empty"><div class="empty-icon">🛍️</div>No products available</div>'
-    : products.map(p => `
-      <div class="product-card" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-        <h4>${p.name}</h4>
-        <p><span class="code">${p.code}</span></p>
-        <p>Price: ${p.price || 'Contact seller'}</p>
-        <p>Category: ${p.category}</p>
-        <button style="width: 100%; margin-top: 10px; background: #22c55e;" onclick="orderProduct('${p.code}')">Order Now</button>
+  const html = ps.length === 0
+    ? '<div class="ce" style="grid-column:1/-1;padding:60px 20px"><div class="ei">🛍️</div><p>No products found</p></div>'
+    : ps.map(p => `
+      <div class="pc" onclick="alert('Order ${p.name} (${p.code})')">
+        <div class="pci">
+          ${p.em || '📦'}
+          <span class="pcb-tag">${p.cat}</span>
+        </div>
+        <div class="pcd">
+          <div class="pcn">${p.name}</div>
+          <div class="pcc">${p.code}</div>
+          <div class="pcp">${p.price || '—'}</div>
+        </div>
       </div>
     `).join('');
   
-  document.getElementById('buyerProducts').innerHTML = buyerHtml;
+  document.getElementById('pgrid').innerHTML = html;
 }
 
-function orderProduct(code) {
-  showToast(`Order placed for ${code}!`, 'success');
+function filterProds(){
+  renderProds();
 }
 
-function updateStatus(connected) {
-  const status = document.getElementById('status');
-  if (connected) {
-    status.textContent = '🟢 Connected';
-    status.className = 'status connected';
-  } else {
-    status.textContent = '🔴 Disconnected';
-    status.className = 'status disconnected';
-  }
+function setCat(cat){
+  currentCat = cat;
+  document.querySelectorAll('.cat').forEach(c => c.classList.remove('on'));
+  event.target.classList.add('on');
+  renderProds();
 }
 
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.style.opacity = '1';
-  toast.style.background = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#1a1a2e';
-  
-  setTimeout(() => {
-    toast.style.opacity = '0';
-  }, 3000);
+function showToast(msg, type = 'info'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#1a1a2e';
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
-
-// Initialize
-switchRole();
 </script>
 
 </body>
