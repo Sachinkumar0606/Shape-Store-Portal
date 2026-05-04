@@ -905,21 +905,35 @@ function fbStopListening(){
 function fbStartBuyerListening(){
   if(!fbDB){ console.warn('No Firebase for buyer listener'); return; }
   console.log('Starting buyer listener for products...');
-  fbDB.ref('products').on('value', function(snap){
+  // First, fetch all products from Firebase once
+  fbDB.ref('products').once('value', function(snap){
     var data=snap.val();
-    console.log('Buyer received products from Firebase:', data);
+    console.log('Buyer loaded products from Firebase:', data);
     if(data){
-      // Sort newest first by id (which is timestamp-based)
       var prods=Object.values(data);
       prods.sort(function(a,b){ return (b.id||'').localeCompare(a.id||''); });
       ST.products=prods;
-      console.log('Updated ST.products with', prods.length, 'products');
+      console.log('✓ Updated ST.products with', prods.length, 'products');
     } else {
-      ST.products=[];
-      console.log('No products in Firebase');
+      console.log('ℹ No products in Firebase yet');
     }
     sd();
     ST.products.forEach(function(p){ if(p.cat&&CATS.indexOf(p.cat)===-1){CATS.push(p.cat);CI[p.cat]='📦';} });
+    renderCats(); renderProds();
+  }, function(error){
+    console.error('Firebase load error:', error);
+  });
+  
+  // Then, listen for real-time changes
+  fbDB.ref('products').on('value', function(snap){
+    var data=snap.val();
+    if(data){
+      var prods=Object.values(data);
+      prods.sort(function(a,b){ return (b.id||'').localeCompare(a.id||''); });
+      ST.products=prods;
+      console.log('✓ Products updated in real-time:', prods.length);
+    }
+    sd();
     renderCats(); renderProds();
   }, function(error){
     console.error('Firebase listener error:', error);
@@ -1037,10 +1051,16 @@ function doLogin(){
   } else {
     showPg('p-buyer');
     document.getElementById('bname').textContent=u.name;
+    // First render from local products while waiting for Firebase
     renderCats();renderProds();
-    startListenerWhenReady(fbStartBuyerListening);
-    // Also listen to orders so buyer history updates in real time
-    startListenerWhenReady(fbStartListening);
+    // Then start listening to Firebase for real-time updates
+    if(fbDB){
+      // Give Firebase a moment to initialize, then start listening
+      setTimeout(function(){
+        fbStartBuyerListening();
+        fbStartListening();
+      }, 500);
+    }
   }
 }
 
