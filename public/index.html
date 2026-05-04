@@ -823,8 +823,10 @@ function fbSaveOrder(order){
 }
 
 function fbSyncProducts(onDone){
+  console.log('📤 Broadcasting', ST.products.length, 'products to all clients');
   socket.emit('sync-products', ST.products);
-  if(onDone) onDone(true);
+  socket.emit('add-product', ST.products[0]); // Also emit the first (newest) product
+  if(onDone) setTimeout(function(){ onDone(true); }, 100);
 }
 
 function fbUpdateOrder(id, data){
@@ -840,7 +842,9 @@ function fbClearOrders(){
 }
 
 function fbStartListening(){
+  console.log('👂 Admin listening for product updates...');
   socket.on('products-updated', function(data){
+    console.log('✓ Admin received products update:', data.products.length);
     ST.products = data.products || [];
     sd();
     if(document.getElementById('p-admin') && document.getElementById('p-admin').classList.contains('on')){
@@ -854,12 +858,16 @@ function fbStopListening(){
 }
 
 function fbStartBuyerListening(){
+  console.log('👂 Buyer listening for product updates...');
+  // Listen for immediate product updates
   socket.on('products-updated', function(data){
+    console.log('✓ Buyer received products update:', data.products.length);
     ST.products = data.products || [];
     sd();
     ST.products.forEach(function(p){ if(p.cat&&CATS.indexOf(p.cat)===-1){CATS.push(p.cat);CI[p.cat]='📦';} });
     renderCats(); renderProds();
   });
+  // Request initial products
   socket.emit('get-products');
 }
 
