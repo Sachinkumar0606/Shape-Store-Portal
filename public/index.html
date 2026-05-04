@@ -815,65 +815,83 @@ code{background:var(--s3);padding:1px 5px;border-radius:4px;font-size:12px;font-
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-// ═══ SOCKET.IO ═══
-var socket = io();
+// ═══ SOCKET.IO CONNECTION ═══
+const socket = io();
+let socketReady = false;
 
-function fbSaveOrder(order){
-  console.log('Order saved:', order.id);
-}
+socket.on('connect', () => {
+  console.log('✓ Connected to server');
+  socketReady = true;
+  socket.emit('set-role', CU ? CU.role : 'guest');
+  socket.emit('get-products');
+});
+
+socket.on('disconnect', () => {
+  console.log('✗ Disconnected from server');
+  socketReady = false;
+});
+
+// Receive all products
+socket.on('load-all-products', (data) => {
+  console.log('📦 Loaded', data.products.length, 'products from server');
+  ST.products = data.products || [];
+  sd();
+  ST.products.forEach(function(p){ if(p.cat&&CATS.indexOf(p.cat)===-1){CATS.push(p.cat);CI[p.cat]='📦';} });
+  if(document.getElementById('p-admin') && document.getElementById('p-admin').classList.contains('on')){
+    renderManage(); renderStats();
+  }
+  if(document.getElementById('p-buyer') && document.getElementById('p-buyer').classList.contains('on')){
+    renderCats(); renderProds();
+  }
+});
+
+// Receive product changes in real-time
+socket.on('products-changed', (data) => {
+  console.log('🔄 Products updated from server');
+  ST.products = data.products || [];
+  sd();
+  ST.products.forEach(function(p){ if(p.cat&&CATS.indexOf(p.cat)===-1){CATS.push(p.cat);CI[p.cat]='📦';} });
+  if(document.getElementById('p-admin') && document.getElementById('p-admin').classList.contains('on')){
+    renderManage(); renderStats();
+  }
+  if(document.getElementById('p-buyer') && document.getElementById('p-buyer').classList.contains('on')){
+    renderCats(); renderProds();
+  }
+});
+
+// ═══ SOCKET.IO FUNCTIONS ═══
+function fbSaveOrder(order){ console.log('Order:', order.id); }
+function fbUpdateOrder(id, data){ console.log('Order updated:', id); }
+function fbDeleteOrder(id){ console.log('Order deleted:', id); }
+function fbClearOrders(){ console.log('Orders cleared'); }
 
 function fbSyncProducts(onDone){
-  console.log('📤 Broadcasting', ST.products.length, 'products to all clients');
-  socket.emit('sync-products', ST.products);
-  socket.emit('add-product', ST.products[0]); // Also emit the first (newest) product
-  if(onDone) setTimeout(function(){ onDone(true); }, 100);
-}
-
-function fbUpdateOrder(id, data){
-  console.log('Order updated:', id);
-}
-
-function fbDeleteOrder(id){
-  console.log('Order deleted:', id);
-}
-
-function fbClearOrders(){
-  console.log('Orders cleared');
+  console.log('📤 Syncing', ST.products.length, 'products...');
+  socket.emit('add-product', ST.products[0]);
+  if(onDone) setTimeout(function(){ onDone(true); }, 200);
 }
 
 function fbStartListening(){
-  console.log('👂 Admin listening for product updates...');
-  socket.on('products-updated', function(data){
-    console.log('✓ Admin received products update:', data.products.length);
-    ST.products = data.products || [];
-    sd();
-    if(document.getElementById('p-admin') && document.getElementById('p-admin').classList.contains('on')){
-      renderStats(); renderOrders(); renderManage();
-    }
-  });
+  console.log('👂 Admin listening...');
+  socket.emit('get-products');
 }
 
 function fbStopListening(){
-  socket.off('products-updated');
+  console.log('🔇 Stopped listening');
 }
 
 function fbStartBuyerListening(){
-  console.log('👂 Buyer listening for product updates...');
-  // Listen for immediate product updates
-  socket.on('products-updated', function(data){
-    console.log('✓ Buyer received products update:', data.products.length);
-    ST.products = data.products || [];
-    sd();
-    ST.products.forEach(function(p){ if(p.cat&&CATS.indexOf(p.cat)===-1){CATS.push(p.cat);CI[p.cat]='📦';} });
-    renderCats(); renderProds();
-  });
-  // Request initial products
+  console.log('👂 Buyer listening...');
   socket.emit('get-products');
 }
 
 function startListenerWhenReady(fn){
-  if(socket){ fn(); return; }
+  if(socketReady && fn) fn();
+  else setTimeout(function(){ startListenerWhenReady(fn); }, 100);
 }
+
+
+
 
 // ═══ STORE ═══
 var SK='shape_v10';
