@@ -4,7 +4,7 @@
   "description": "Simple Shape Store Portal with real-time sync",
   "main": "server.js",
   "scripts": {
-    "start": "node server_simple.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
