@@ -14,15 +14,20 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'products.json');
 
 let products = [];
+let clients = {};
 
 function loadProducts() {
   try {
     if (fs.existsSync(DATA_FILE)) {
-      products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-      console.log('✓ Loaded', products.length, 'products');
+      const data = fs.readFileSync(DATA_FILE, 'utf8');
+      products = JSON.parse(data);
+      console.log('✓ Loaded', products.length, 'products from disk');
+    } else {
+      console.log('📝 No products file, starting fresh');
+      products = [];
     }
   } catch (e) {
-    console.warn('Could not load products:', e.message);
+    console.error('Error loading products:', e.message);
     products = [];
   }
 }
@@ -30,9 +35,9 @@ function loadProducts() {
 function saveProducts() {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(products, null, 2));
-    console.log('✓ Saved', products.length, 'products');
+    console.log('✓ Saved', products.length, 'products to disk');
   } catch (e) {
-    console.warn('Could not save products:', e.message);
+    console.error('Error saving products:', e.message);
   }
 }
 
@@ -40,59 +45,63 @@ loadProducts();
 
 // ===== EXPRESS =====
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-
-app.get('/api/products', (req, res) => {
-  res.json({ products });
-});
-
-app.post('/api/products', (req, res) => {
-  const product = req.body;
-  products.unshift(product);
-  saveProducts();
-  io.emit('products-updated', { products });
-  res.json({ success: true, product });
-});
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb' }));
 
 // ===== SOCKET.IO =====
 io.on('connection', (socket) => {
-  console.log('✓ Client connected:', socket.id);
+  const clientId = socket.id;
+  clients[clientId] = { socket, role: null };
+  console.log(`✓ Client connected: ${clientId}`);
   
-  // Send current products to new client
-  socket.emit('products-updated', { products });
+  // Send all products to new client immediately
+  socket.emit('load-all-products', { products });
   
-  // Handle product sync from admin
-  socket.on('sync-products', (prods) => {
-    products = prods || [];
-    saveProducts();
-    console.log('✓ Products synced:', products.length);
-    io.emit('products-updated', { products });
+  // When a client identifies themselves
+  socket.on('set-role', (role) => {
+    clients[clientId].role = role;
+    console.log(`  → Client ${clientId} is ${role}`);
+    socket.emit('load-all-products', { products });
   });
   
-  // Handle getting products
-  socket.on('get-products', () => {
-    socket.emit('products-updated', { products });
-  });
-  
-  // Handle adding product from admin
+  // When admin adds a product
   socket.on('add-product', (product) => {
-    console.log('➕ New product:', product.name);
+    console.log(`\n➕ NEW PRODUCT: ${product.name}`);
+    console.log(`   Code: ${product.code}`);
+    console.log(`   Image: ${product.customImg ? product.customImg.substring(0, 50) + '...' : 'none'}`);
+    
     products.unshift(product);
     saveProducts();
-    io.emit('products-updated', { products });
+    
+    console.log(`   📡 Broadcasting to ${Object.keys(clients).length} clients`);
+    io.emit('products-changed', { products, action: 'added', product });
+  });
+  
+  // Get all products
+  socket.on('get-products', () => {
+    socket.emit('load-all-products', { products });
+  });
+  
+  // Delete product
+  socket.on('delete-product', (productId) => {
+    products = products.filter(p => p.id !== productId);
+    saveProducts();
+    io.emit('products-changed', { products, action: 'deleted', productId });
   });
   
   socket.on('disconnect', () => {
-    console.log('✗ Client disconnected:', socket.id);
+    delete clients[clientId];
+    console.log(`✗ Client disconnected: ${clientId}`);
   });
 });
 
+// ===== START SERVER =====
 server.listen(PORT, () => {
   console.log(`
-╔════════════════════════════════════╗
-║   Shape Store Portal Running      ║
-║   Port: ${PORT}                           ║
-║   Products: ${products.length}                         ║
-╚════════════════════════════════════╝
+╔═══════════════════════════════════════╗
+║  🚀 Shape Store Portal is LIVE        ║
+║  📦 Products: ${products.length}                       ║
+║  👥 Clients: ${Object.keys(clients).length}                        ║
+╚═══════════════════════════════════════╝
   `);
 });
