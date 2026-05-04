@@ -13,7 +13,6 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'products.json');
 
-// ===== DATA MANAGEMENT =====
 let products = [];
 
 function loadProducts() {
@@ -37,10 +36,9 @@ function saveProducts() {
   }
 }
 
-// Load on startup
 loadProducts();
 
-// ===== EXPRESS ROUTES =====
+// ===== EXPRESS =====
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
@@ -50,7 +48,7 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   const product = req.body;
-  products.unshift(product); // Add to beginning
+  products.unshift(product);
   saveProducts();
   io.emit('products-updated', { products });
   res.json({ success: true, product });
@@ -61,15 +59,27 @@ io.on('connection', (socket) => {
   console.log('✓ Client connected:', socket.id);
   
   // Send current products to new client
-  socket.emit('load-products', { products });
+  socket.emit('products-updated', { products });
   
-  // Listen for new products from admin
+  // Handle product sync from admin
+  socket.on('sync-products', (prods) => {
+    products = prods || [];
+    saveProducts();
+    console.log('✓ Products synced:', products.length);
+    io.emit('products-updated', { products });
+  });
+  
+  // Handle getting products
+  socket.on('get-products', () => {
+    socket.emit('products-updated', { products });
+  });
+  
+  // Handle adding product from admin
   socket.on('add-product', (product) => {
     console.log('➕ New product:', product.name);
     products.unshift(product);
     saveProducts();
-    // Broadcast to all clients
-    io.emit('load-products', { products });
+    io.emit('products-updated', { products });
   });
   
   socket.on('disconnect', () => {
@@ -77,7 +87,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ===== START SERVER =====
 server.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════╗
