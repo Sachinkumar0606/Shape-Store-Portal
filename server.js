@@ -9,138 +9,136 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: { origin: "*" },
-  maxHttpBufferSize: 1e8,  // 100 MB - for product images
-  pingTimeout: 60000
+  maxHttpBufferSize: 1e8,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 const PORT = process.env.PORT || 3000;
-const PRODUCTS_FILE = path.join(__dirname, 'products.json');
-const ORDERS_FILE = path.join(__dirname, 'orders.json');
+const DATA_DIR = path.join(__dirname, 'data');
+const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
+const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+const BUYERS_FILE = path.join(DATA_DIR, 'buyers.json');
 
-// ===== STORAGE =====
+if (!fs.existsSync(DATA_DIR)) {
+  try { fs.mkdirSync(DATA_DIR); } catch(e) {}
+}
+
 let products = [];
 let orders = [];
+let buyers = [
+  { id: 'buyer1', pass: '1234', name: 'Demo Buyer', shop: 'Demo Shop' }
+];
 
-function loadData(){
+function load(file, fallback) {
   try {
-    if (fs.existsSync(PRODUCTS_FILE)) {
-      products = JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf8'));
-      console.log('✅ Loaded ' + products.length + ' products');
-    }
-  } catch (e) {
-    console.log('⚠️ Could not load products: ' + e.message);
-    products = [];
-  }
-  try {
-    if (fs.existsSync(ORDERS_FILE)) {
-      orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf8'));
-      console.log('✅ Loaded ' + orders.length + ' orders');
-    }
-  } catch (e) {
-    console.log('⚠️ Could not load orders: ' + e.message);
-    orders = [];
-  }
+    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch(e) { console.log('Load error', e.message); }
+  return fallback;
+}
+function save(file, data) {
+  try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
+  catch(e) { console.log('Save error', e.message); }
 }
 
-function saveProducts(){
-  try {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
-  } catch (e) {
-    console.log('⚠️ Save products failed: ' + e.message);
-  }
-}
+products = load(PRODUCTS_FILE, []);
+orders = load(ORDERS_FILE, []);
+buyers = load(BUYERS_FILE, buyers);
+save(BUYERS_FILE, buyers);
 
-function saveOrders(){
-  try {
-    fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
-  } catch (e) {
-    console.log('⚠️ Save orders failed: ' + e.message);
-  }
-}
+console.log('Loaded ' + products.length + 'p, ' + orders.length + 'o, ' + buyers.length + 'b');
 
-loadData();
-
-// ===== EXPRESS =====
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== SOCKET.IO =====
 io.on('connection', (socket) => {
-  console.log('🔌 Connected: ' + socket.id + ' (total: ' + io.engine.clientsCount + ')');
+  console.log('+ ' + socket.id);
+  socket.emit('init', { products, orders, buyers });
   
-  // Send current data to new client
-  socket.emit('products-list', products);
-  socket.emit('orders-list', orders);
-  
-  // ===== PRODUCTS =====
-  socket.on('get-products', () => {
-    socket.emit('products-list', products);
+  socket.on('get-data', () => {
+    socket.emit('init', { products, orders, buyers });
   });
   
-  // Sync the entire products array (when admin adds/changes)
-  socket.on('sync-products', (newProducts) => {
-    if (Array.isArray(newProducts)) {
-      products = newProducts;
-      saveProducts();
-      console.log('💾 Products synced: ' + products.length + ' items, broadcasting to ' + io.engine.clientsCount + ' clients');
-      io.emit('products-list', products);
-      socket.emit('product-saved', { success: true });
-    } else {
-      socket.emit('product-saved', { success: false });
+  socket.on('admin-add-product', (product, ack) => {
+    if (!product || !product.id) { if (ack) ack({ success: false, error: 'Invalid product' }); return; }
+    if (products.find(p => p.code && product.code && p.code.toLowerCase() === product.code.toLowerCase())) {
+      if (ack) ack({ success: false, error: 'Code already exists' }); return;
     }
+    products.unshift(product);
+    save(PRODUCTS_FILE, products);
+    io.emit('products-update', products);
+    if (ack) ack({ success: true });
   });
   
-  // ===== ORDERS =====
-  socket.on('get-orders', () => {
-    socket.emit('orders-list', orders);
-  });
-  
-  socket.on('save-order', (order) => {
-    if (!order || !order.id) return;
-    // Replace existing or add new
-    const idx = orders.findIndex(o => o.id === order.id);
-    if (idx >= 0) orders[idx] = order;
-    else orders.unshift(order);
-    saveOrders();
-    console.log('📝 Order saved: ' + order.id);
-    io.emit('orders-list', orders);
-  });
-  
-  socket.on('update-order', (payload) => {
-    if (!payload || !payload.id) return;
-    const idx = orders.findIndex(o => o.id === payload.id);
+  socket.on('admin-update-product', (product, ack) => {
+    if (!product || !product.id) { if (ack) ack({ success: false }); return; }
+    const idx = products.findIndex(p => p.id === product.id);
     if (idx >= 0) {
-      orders[idx] = Object.assign({}, orders[idx], payload.data || {});
-      saveOrders();
-      console.log('✏️ Order updated: ' + payload.id);
-      io.emit('orders-list', orders);
+      products[idx] = product;
+      save(PRODUCTS_FILE, products);
+      io.emit('products-update', products);
+      if (ack) ack({ success: true });
+    } else if (ack) ack({ success: false });
+  });
+  
+  socket.on('admin-delete-product', (productId) => {
+    products = products.filter(p => p.id !== productId);
+    save(PRODUCTS_FILE, products);
+    io.emit('products-update', products);
+  });
+  
+  socket.on('admin-mark-sent', (orderId) => {
+    const o = orders.find(x => x.id === orderId);
+    if (o) {
+      o.status = 'sent';
+      o.sentAt = new Date().toISOString();
+      save(ORDERS_FILE, orders);
+      io.emit('orders-update', orders);
     }
   });
   
-  socket.on('delete-order', (id) => {
-    orders = orders.filter(o => o.id !== id);
-    saveOrders();
-    console.log('🗑️ Order deleted: ' + id);
-    io.emit('orders-list', orders);
+  socket.on('admin-delete-order', (orderId) => {
+    orders = orders.filter(o => o.id !== orderId);
+    save(ORDERS_FILE, orders);
+    io.emit('orders-update', orders);
   });
   
-  socket.on('clear-orders', () => {
+  socket.on('admin-clear-orders', () => {
     orders = [];
-    saveOrders();
-    console.log('🗑️ All orders cleared');
-    io.emit('orders-list', orders);
+    save(ORDERS_FILE, orders);
+    io.emit('orders-update', orders);
   });
   
-  socket.on('disconnect', () => {
-    console.log('🔌 Disconnected: ' + socket.id);
+  socket.on('admin-add-buyer', (buyer, ack) => {
+    if (!buyer || !buyer.id || !buyer.pass) { if (ack) ack({ success: false, error: 'Need ID and password' }); return; }
+    if (buyers.find(b => b.id.toLowerCase() === buyer.id.toLowerCase())) {
+      if (ack) ack({ success: false, error: 'ID already exists' }); return;
+    }
+    buyers.push(buyer);
+    save(BUYERS_FILE, buyers);
+    io.emit('buyers-update', buyers);
+    if (ack) ack({ success: true });
   });
+  
+  socket.on('admin-delete-buyer', (buyerId) => {
+    buyers = buyers.filter(b => b.id !== buyerId);
+    save(BUYERS_FILE, buyers);
+    io.emit('buyers-update', buyers);
+  });
+  
+  socket.on('place-order', (order, ack) => {
+    if (!order || !order.items || !order.buyerId) { if (ack) ack({ success: false, error: 'Invalid order' }); return; }
+    order.id = 'O' + Date.now();
+    order.status = 'new';
+    order.createdAt = new Date().toISOString();
+    orders.unshift(order);
+    save(ORDERS_FILE, orders);
+    io.emit('orders-update', orders);
+    if (ack) ack({ success: true, orderId: order.id });
+  });
+  
+  socket.on('disconnect', () => { console.log('- ' + socket.id); });
 });
 
 server.listen(PORT, () => {
-  console.log('');
-  console.log('╔════════════════════════════════════════╗');
-  console.log('║  🚀 Shape Portal LIVE on port ' + PORT);
-  console.log('║  📦 Products: ' + products.length);
-  console.log('║  📝 Orders: ' + orders.length);
-  console.log('╚════════════════════════════════════════╝');
-  console.log('');
+  console.log('Shape Trade Portal LIVE on port ' + PORT);
 });
