@@ -7,7 +7,6 @@ const fs = require('fs');
 const app = express();
 const server = http.createServer(app);
 
-// CRITICAL: maxHttpBufferSize must be large for image uploads
 const io = socketIo(server, {
   cors: { origin: "*" },
   maxHttpBufferSize: 1e8,  // 100 MB - for product images
@@ -15,74 +14,120 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'products.json');
+const PRODUCTS_FILE = path.join(__dirname, 'products.json');
+const ORDERS_FILE = path.join(__dirname, 'orders.json');
 
-// Load products from disk on startup
+// ===== STORAGE =====
 let products = [];
-try {
-  if (fs.existsSync(DATA_FILE)) {
-    products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    console.log('✅ Loaded ' + products.length + ' products from disk');
-  } else {
-    console.log('📁 No products file - starting fresh');
-  }
-} catch (e) {
-  console.log('⚠️ Could not load products: ' + e.message);
-  products = [];
-}
+let orders = [];
 
-// Save products to disk
-function saveProducts() {
+function loadData(){
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(products, null, 2));
-    console.log('💾 Saved ' + products.length + ' products to disk');
+    if (fs.existsSync(PRODUCTS_FILE)) {
+      products = JSON.parse(fs.readFileSync(PRODUCTS_FILE, 'utf8'));
+      console.log('✅ Loaded ' + products.length + ' products');
+    }
   } catch (e) {
-    console.log('⚠️ Save failed: ' + e.message);
+    console.log('⚠️ Could not load products: ' + e.message);
+    products = [];
+  }
+  try {
+    if (fs.existsSync(ORDERS_FILE)) {
+      orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf8'));
+      console.log('✅ Loaded ' + orders.length + ' orders');
+    }
+  } catch (e) {
+    console.log('⚠️ Could not load orders: ' + e.message);
+    orders = [];
   }
 }
 
-// Serve static files
+function saveProducts(){
+  try {
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
+  } catch (e) {
+    console.log('⚠️ Save products failed: ' + e.message);
+  }
+}
+
+function saveOrders(){
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
+  } catch (e) {
+    console.log('⚠️ Save orders failed: ' + e.message);
+  }
+}
+
+loadData();
+
+// ===== EXPRESS =====
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Socket.io
+// ===== SOCKET.IO =====
 io.on('connection', (socket) => {
-  console.log('🔌 Client connected: ' + socket.id + ' (total: ' + io.engine.clientsCount + ')');
+  console.log('🔌 Connected: ' + socket.id + ' (total: ' + io.engine.clientsCount + ')');
   
-  // Send all products immediately to new client
+  // Send current data to new client
   socket.emit('products-list', products);
+  socket.emit('orders-list', orders);
   
-  // Admin requests products
+  // ===== PRODUCTS =====
   socket.on('get-products', () => {
-    console.log('📤 Sending products to ' + socket.id);
     socket.emit('products-list', products);
   });
   
-  // Admin adds a product
-  socket.on('add-product', (product, callback) => {
-    console.log('➕ New product: ' + product.name + ' (code: ' + product.code + ')');
-    
-    // Check for duplicate
-    if (products.find(p => p.code === product.code)) {
-      console.log('   ❌ Duplicate code');
-      if (typeof callback === 'function') callback({ success: false, error: 'Code already exists' });
-      return;
+  // Sync the entire products array (when admin adds/changes)
+  socket.on('sync-products', (newProducts) => {
+    if (Array.isArray(newProducts)) {
+      products = newProducts;
+      saveProducts();
+      console.log('💾 Products synced: ' + products.length + ' items, broadcasting to ' + io.engine.clientsCount + ' clients');
+      io.emit('products-list', products);
+      socket.emit('product-saved', { success: true });
+    } else {
+      socket.emit('product-saved', { success: false });
     }
-    
-    products.unshift(product);
-    saveProducts();
-    
-    // Broadcast to ALL clients (including sender)
-    io.emit('products-list', products);
-    console.log('   📡 Broadcasted to ' + io.engine.clientsCount + ' clients');
-    
-    if (typeof callback === 'function') callback({ success: true });
   });
   
-  // Admin deletes a product
-  socket.on('delete-product', (productId) => {
-    products = products.filter(p => p.id !== productId);
-    saveProducts();
-    io.emit('products-list', products);
+  // ===== ORDERS =====
+  socket.on('get-orders', () => {
+    socket.emit('orders-list', orders);
+  });
+  
+  socket.on('save-order', (order) => {
+    if (!order || !order.id) return;
+    // Replace existing or add new
+    const idx = orders.findIndex(o => o.id === order.id);
+    if (idx >= 0) orders[idx] = order;
+    else orders.unshift(order);
+    saveOrders();
+    console.log('📝 Order saved: ' + order.id);
+    io.emit('orders-list', orders);
+  });
+  
+  socket.on('update-order', (payload) => {
+    if (!payload || !payload.id) return;
+    const idx = orders.findIndex(o => o.id === payload.id);
+    if (idx >= 0) {
+      orders[idx] = Object.assign({}, orders[idx], payload.data || {});
+      saveOrders();
+      console.log('✏️ Order updated: ' + payload.id);
+      io.emit('orders-list', orders);
+    }
+  });
+  
+  socket.on('delete-order', (id) => {
+    orders = orders.filter(o => o.id !== id);
+    saveOrders();
+    console.log('🗑️ Order deleted: ' + id);
+    io.emit('orders-list', orders);
+  });
+  
+  socket.on('clear-orders', () => {
+    orders = [];
+    saveOrders();
+    console.log('🗑️ All orders cleared');
+    io.emit('orders-list', orders);
   });
   
   socket.on('disconnect', () => {
@@ -93,8 +138,9 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log('');
   console.log('╔════════════════════════════════════════╗');
-  console.log('║  🚀 Shape Portal LIVE on port ' + PORT + '       ║');
-  console.log('║  📦 Products in store: ' + products.length + '              ║');
+  console.log('║  🚀 Shape Portal LIVE on port ' + PORT);
+  console.log('║  📦 Products: ' + products.length);
+  console.log('║  📝 Orders: ' + orders.length);
   console.log('╚════════════════════════════════════════╝');
   console.log('');
 });
