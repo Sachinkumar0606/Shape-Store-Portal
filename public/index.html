@@ -371,6 +371,100 @@
   .toast.on{transform:translateX(-50%) translateY(0)}
   .toast.ok{background:var(--green)}
   .toast.er{background:var(--red)}
+
+  /* ============ NEW FEATURES CSS ============ */
+  
+  /* Login footer */
+  .login-foot{margin-top:22px;text-align:center;color:var(--text3);font-size:12px;font-weight:500}
+  .login-foot p{margin:4px 0}
+  .login-foot .dev-credit{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)}
+  .login-foot .dev-credit b{color:var(--navy);font-weight:700}
+  
+  /* Buyer footer */
+  .buyer-foot{padding:24px 20px;text-align:center;color:var(--text3);font-size:12px;font-weight:500;background:#fff;border-top:1px solid var(--border);margin-top:20px}
+  .buyer-foot p{margin:3px 0}
+  .buyer-foot .dev-credit{font-size:11px;margin-top:8px}
+  .buyer-foot .dev-credit b{color:var(--navy);font-weight:700}
+  
+  /* Multiple image thumbnails */
+  .img-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;justify-content:center}
+  .img-thumbs:empty{display:none}
+  .img-thumbs .thumb{position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+  .img-thumbs .thumb img{width:100%;height:100%;object-fit:cover}
+  .img-thumbs .thumb-rm{position:absolute;top:2px;right:2px;background:var(--red);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
+  
+  /* Product detail carousel */
+  .pd-img-wrap{position:relative;background:#f3f4f6}
+  .pd-img-prev,.pd-img-next{
+    position:absolute;top:50%;transform:translateY(-50%);
+    width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.95);
+    border:none;font-size:22px;cursor:pointer;display:none;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);color:var(--navy);font-weight:700;z-index:5;
+  }
+  .pd-img-prev{left:12px}
+  .pd-img-next{right:12px}
+  .pd-img-prev.show,.pd-img-next.show{display:flex}
+  .pd-img-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:5}
+  .pd-img-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.5);transition:all 0.2s}
+  .pd-img-dot.on{background:#fff;width:20px;border-radius:99px}
+  .pd-zoom-hint{position:absolute;top:10px;right:10px;background:rgba(10,14,39,0.7);color:#fff;font-size:10px;padding:4px 9px;border-radius:99px;font-weight:600;pointer-events:none}
+  .pd-img{cursor:zoom-in}
+  
+  /* Image zoom overlay */
+  .zoom-bg{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:500;display:none;align-items:center;justify-content:center;padding:60px 20px;cursor:zoom-out}
+  .zoom-bg.on{display:flex;animation:fadeIn 0.2s}
+  .zoom-bg img{max-width:100%;max-height:100%;object-fit:contain;cursor:default;user-select:none}
+  .zoom-close{position:fixed;top:20px;right:20px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;font-weight:700;backdrop-filter:blur(10px);z-index:501}
+  .zoom-close:hover{background:rgba(255,255,255,0.25)}
+  .zoom-prev,.zoom-next{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:28px;cursor:pointer;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px);font-weight:700;z-index:501}
+  .zoom-prev{left:20px}
+  .zoom-next{right:20px}
+  .zoom-prev.show,.zoom-next.show{display:flex}
+  .zoom-prev:hover,.zoom-next:hover{background:rgba(255,255,255,0.25)}
+  .zoom-counter{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.15);color:#fff;padding:8px 14px;border-radius:99px;font-size:13px;font-weight:700;backdrop-filter:blur(10px);z-index:501;display:none}
+  .zoom-counter.show{display:block}
+  
+  /* Cart improvements */
+  .cart-notes-wrap{margin-bottom:14px}
+  .cart-notes-wrap label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px}
+  .cart-notes-wrap textarea{
+    width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:9px;
+    font-size:13px;font-family:inherit;resize:vertical;min-height:60px;background:#fff;outline:none;font-weight:500;
+  }
+  .cart-notes-wrap textarea:focus{border-color:var(--navy)}
+  .cart-summary{background:#fff;border-radius:11px;padding:14px;margin-bottom:14px;border:1px solid var(--border)}
+  .cart-summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;color:var(--text2);font-weight:600}
+  .cart-summary-row.save{color:var(--green);font-weight:700}
+  .cart-summary-row.total{font-size:17px;font-weight:800;color:var(--navy);border-top:2px solid var(--border);margin-top:8px;padding-top:12px}
+  .cart-summary-row.total span:last-child{color:var(--orange);font-family:'DM Serif Display',serif;font-weight:400;font-size:22px}
+  
+  /* Contact links */
+  .contact-link{display:flex;align-items:center;gap:14px;padding:14px;background:#f9fafb;border-radius:11px;text-decoration:none;color:var(--navy);margin-bottom:10px;transition:all 0.15s;border:1px solid var(--border)}
+  .contact-link:hover{background:#fff;border-color:var(--navy);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+  .contact-link .ico{font-size:24px;width:44px;height:44px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)}
+  .contact-link.wa .ico{background:#25d366;color:#fff;border-color:#25d366}
+  .contact-link.phone .ico{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .contact-link.email .ico{background:var(--orange);color:#fff;border-color:var(--orange)}
+  .contact-link div{flex:1;min-width:0}
+  .contact-link b{display:block;font-size:14px;font-weight:800;margin-bottom:2px}
+  .contact-link span{font-size:12px;color:var(--text2);font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  
+  .dev-block{background:#f3f4f6;border-radius:10px;padding:12px;margin-top:18px;text-align:center;font-size:11px;color:var(--text3);line-height:1.7}
+  .dev-block b{color:var(--navy);font-weight:700}
+  .dev-block p{margin:2px 0}
+  
+  /* Info block */
+  .info-block{background:#f9fafb;border-radius:10px;padding:16px;font-size:13px;line-height:1.7;color:var(--text)}
+  .info-block b{color:var(--navy);font-weight:700}
+  
+  /* Order full summary */
+  .order-summary{background:#f9fafb;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px}
+  .order-summary-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--text2);font-weight:600}
+  .order-summary-row.total{color:var(--navy);font-weight:800;border-top:1px solid var(--border);margin-top:6px;padding-top:8px;font-size:13px}
+  .order-summary-row.total span:last-child{color:var(--orange)}
+  .order-notes{background:#fef3c7;border-left:3px solid #f59e0b;padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:12px;color:#78350f;font-weight:600}
+  .order-notes b{display:block;margin-bottom:3px;font-weight:800}
+  .order-item-detail{font-size:11px;color:var(--text3);font-weight:500;margin-top:2px}
 </style>
 </head>
 <body>
@@ -393,10 +487,9 @@
     </div>
     <button class="login-btn" onclick="doLogin()">Sign In</button>
     <div class="login-err" id="login-err"></div>
-    <div class="login-hint">
-      <b>Default accounts:</b><br>
-      Distributor (admin): <code>admin</code> / <code>shape2026</code><br>
-      Buyer (demo): <code>buyer1</code> / <code>1234</code>
+    <div class="login-foot">
+      <p>Need an account? Contact your distributor</p>
+      <p class="dev-credit">Developed by <b>Satyam Yadav</b></p>
     </div>
   </div>
 </div>
@@ -421,6 +514,7 @@
     <button class="admin-tab on" onclick="setAdminTab('orders',this)">📦 Orders</button>
     <button class="admin-tab" onclick="setAdminTab('products',this)">🏷️ Products</button>
     <button class="admin-tab" onclick="setAdminTab('buyers',this)">👥 Buyers</button>
+    <button class="admin-tab" onclick="setAdminTab('settings',this)">⚙️ Settings</button>
   </div>
   
   <div class="admin-content">
@@ -460,12 +554,12 @@
         
         <div class="form-row full">
           <div class="form-field">
-            <label>Product Picture</label>
+            <label>Product Photos (you can add multiple)</label>
             <label class="img-upload" id="img-up-label">
-              <img class="preview" id="img-preview">
-              <div class="icon">📸</div>
-              <div class="text" id="img-up-text">Tap to choose product photo</div>
-              <input type="file" accept="image/*" id="img-input" onchange="handleImage(event)">
+              <div id="img-thumbs" class="img-thumbs"></div>
+              <div class="icon" id="img-up-icon">📸</div>
+              <div class="text" id="img-up-text">Tap to add photos (multiple allowed)</div>
+              <input type="file" accept="image/*" id="img-input" onchange="handleImage(event)" multiple>
             </label>
           </div>
         </div>
@@ -492,17 +586,8 @@
           </div>
           <div class="form-field">
             <label>Category</label>
-            <select id="np-cat">
-              <option>Pens</option>
-              <option>Pencils</option>
-              <option>Notebooks</option>
-              <option>Markers</option>
-              <option>Erasers</option>
-              <option>Geometry</option>
-              <option>Files & Folders</option>
-              <option>Art Supplies</option>
-              <option>Other</option>
-            </select>
+            <select id="np-cat" onchange="onCatChange()"></select>
+            <input type="text" id="np-newcat" placeholder="Type new category name" style="display:none;margin-top:8px">
           </div>
         </div>
         
@@ -563,6 +648,42 @@
         <div id="buyer-list"></div>
       </div>
     </div>
+    
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="admin-tabpanel">
+      <div class="card">
+        <div class="card-title">Contact Information (visible to buyers)</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>WhatsApp Number (for orders) *</label>
+            <input type="text" id="set-whatsapp" placeholder="917710729782 (with country code, no +)">
+          </div>
+          <div class="form-field">
+            <label>Phone Number (display)</label>
+            <input type="text" id="set-phone" placeholder="+91 77107 29782">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-field">
+            <label>Email Address</label>
+            <input type="email" id="set-email" placeholder="contact@example.com">
+          </div>
+        </div>
+        <button class="submit-btn" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">App Information</div>
+        <div class="info-block">
+          <p><b>Shape Trade Portal</b> — Wholesale Marketplace</p>
+          <p style="margin-top:6px;color:var(--text2)">Real-time product sync between distributor and shopkeepers</p>
+          <hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">
+          <p><b>Developer:</b> Satyam Yadav</p>
+          <p style="color:var(--text2)">📞 +91 77107 29782</p>
+          <p style="color:var(--text2)">📧 Satyamyadav19125@gmail.com</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -578,6 +699,7 @@
     </div>
     <div class="topbar-r">
       <div class="live-pill" id="conn-2"><span class="live-dot"></span><span>Live</span></div>
+      <button class="icon-btn" onclick="showContact()">📞 Contact</button>
       <button class="icon-btn" onclick="showHistory()">📜 History</button>
       <button class="icon-btn primary" onclick="showCart()">🛒 Cart <span class="cart-badge" id="cart-badge">0</span></button>
       <button class="icon-btn" onclick="doLogout()">Sign out</button>
@@ -597,6 +719,10 @@
   
   <div style="flex:1;overflow-y:auto;background:var(--bg)">
     <div class="product-grid" id="product-grid"></div>
+    <div class="buyer-foot">
+      <p>For orders & support, contact your distributor</p>
+      <p class="dev-credit">Powered by <b>Shape Trade Portal</b> · Developed by <b>Satyam Yadav</b></p>
+    </div>
   </div>
 </div>
 
@@ -604,7 +730,13 @@
 <div class="modal-bg" id="modal-product">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="pd-img" id="pd-img"></div>
+    <div class="pd-img-wrap">
+      <div class="pd-img" id="pd-img" onclick="zoomCurrent()"></div>
+      <button class="pd-img-prev" id="pd-img-prev" onclick="pdPrev();event.stopPropagation()">‹</button>
+      <button class="pd-img-next" id="pd-img-next" onclick="pdNext();event.stopPropagation()">›</button>
+      <div class="pd-img-dots" id="pd-img-dots"></div>
+      <div class="pd-zoom-hint">🔍 Tap image to zoom</div>
+    </div>
     <div class="pd-body">
       <span class="pd-cat" id="pd-cat">Category</span>
       <h2 class="pd-name" id="pd-name">Product Name</h2>
@@ -654,10 +786,28 @@
       <button class="cart-close" onclick="closeModal('modal-cart')">✕</button>
     </div>
     <div class="cart-items" id="cart-items"></div>
-    <div class="cart-foot">
-      <div class="cart-total">
-        <span class="lbl">Total Items</span>
-        <span class="val" id="cart-total-qty">0</span>
+    <div class="cart-foot" id="cart-foot">
+      <div class="cart-notes-wrap">
+        <label>📝 Notes for distributor (optional)</label>
+        <textarea id="cart-notes" placeholder="Any special instructions for this order..."></textarea>
+      </div>
+      <div class="cart-summary">
+        <div class="cart-summary-row">
+          <span>Total Items</span>
+          <span id="cart-total-qty">0</span>
+        </div>
+        <div class="cart-summary-row">
+          <span>Total MRP</span>
+          <span id="cart-total-mrp">₹0</span>
+        </div>
+        <div class="cart-summary-row save">
+          <span>You Save</span>
+          <span id="cart-savings">₹0</span>
+        </div>
+        <div class="cart-summary-row total">
+          <span>Total Payable</span>
+          <span id="cart-total-dp">₹0</span>
+        </div>
       </div>
       <button class="place-order-btn" id="place-btn" onclick="placeOrder()">Place Order</button>
     </div>
@@ -674,6 +824,58 @@
     </div>
     <div class="cart-items" id="history-list"></div>
   </div>
+</div>
+
+<!-- ============ CONTACT MODAL ============ -->
+<div class="modal-bg" id="modal-contact">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="cart-head">
+      <h3>📞 Contact Distributor</h3>
+      <button class="cart-close" onclick="closeModal('modal-contact')">✕</button>
+    </div>
+    <div style="padding:20px 22px 30px">
+      <p style="color:var(--text2);margin-bottom:18px;font-size:14px">Reach out for orders, queries, or support:</p>
+      
+      <a class="contact-link wa" id="contact-wa" target="_blank" rel="noopener">
+        <span class="ico">💬</span>
+        <div>
+          <b>WhatsApp</b>
+          <span id="contact-wa-num">—</span>
+        </div>
+      </a>
+      
+      <a class="contact-link phone" id="contact-phone">
+        <span class="ico">📞</span>
+        <div>
+          <b>Call</b>
+          <span id="contact-phone-num">—</span>
+        </div>
+      </a>
+      
+      <a class="contact-link email" id="contact-email">
+        <span class="ico">📧</span>
+        <div>
+          <b>Email</b>
+          <span id="contact-email-addr">—</span>
+        </div>
+      </a>
+      
+      <div class="dev-block">
+        <p>App developed by <b>Satyam Yadav</b></p>
+        <p>📞 +91 77107 29782 · 📧 Satyamyadav19125@gmail.com</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ IMAGE ZOOM MODAL ============ -->
+<div class="zoom-bg" id="zoom-bg" onclick="closeZoom()">
+  <button class="zoom-close" onclick="closeZoom();event.stopPropagation()">✕</button>
+  <button class="zoom-prev" onclick="zoomPrev();event.stopPropagation()">‹</button>
+  <button class="zoom-next" onclick="zoomNext();event.stopPropagation()">›</button>
+  <img id="zoom-img" onclick="event.stopPropagation()">
+  <div class="zoom-counter" id="zoom-counter"></div>
 </div>
 
 <!-- Upload Overlay -->
@@ -697,19 +899,21 @@
 var products = [];
 var orders = [];
 var buyers = [];
+var settings = { whatsapp: '917710729782', email: 'Satyamyadav19125@gmail.com', phone: '+91 77107 29782', categories: [] };
 var currentUser = null;
 var currentCat = 'All';
-var newImg = null;
+var newImgs = []; // Array of base64 images
 var modalProduct = null;
 var modalQty = 1;
+var modalImgIdx = 0;
+var zoomImgs = [];
+var zoomIdx = 0;
 var cart = [];
 
 var EMOJIS = {
   'Pens':'🖊️','Pencils':'✏️','Notebooks':'📓','Markers':'🖍️',
   'Erasers':'🩹','Geometry':'📐','Files & Folders':'📁','Art Supplies':'🎨','Other':'📦'
 };
-
-var WHATSAPP = '917710729782';
 
 // ============ SOCKET.IO ============
 var socket = io({ reconnection:true, reconnectionDelay:500 });
@@ -724,6 +928,8 @@ socket.on('init', function(data){
   products = data.products || [];
   orders = data.orders || [];
   buyers = data.buyers || [];
+  if(data.settings) settings = Object.assign(settings, data.settings);
+  refreshCategories();
   redraw();
 });
 socket.on('products-update', function(data){
@@ -736,6 +942,11 @@ socket.on('orders-update', function(data){
 });
 socket.on('buyers-update', function(data){
   buyers = data || [];
+  redraw();
+});
+socket.on('settings-update', function(data){
+  if(data) settings = Object.assign(settings, data);
+  refreshCategories();
   redraw();
 });
 
@@ -751,6 +962,33 @@ function setConn(ok){
 function redraw(){
   if(document.getElementById('p-admin').classList.contains('on')) renderAdmin();
   if(document.getElementById('p-buyer').classList.contains('on')) renderStore();
+}
+
+function refreshCategories(){
+  // Populate category dropdown in admin
+  var sel = document.getElementById('np-cat');
+  if(!sel) return;
+  var current = sel.value;
+  var html = '';
+  var cats = settings.categories || [];
+  for(var i=0;i<cats.length;i++){
+    html += '<option value="' + esc(cats[i]) + '">' + esc(cats[i]) + '</option>';
+  }
+  html += '<option value="__new__">➕ Add new category...</option>';
+  sel.innerHTML = html;
+  if(current && cats.indexOf(current) !== -1) sel.value = current;
+}
+
+function onCatChange(){
+  var sel = document.getElementById('np-cat');
+  var newCatInput = document.getElementById('np-newcat');
+  if(sel.value === '__new__'){
+    newCatInput.style.display = 'block';
+    newCatInput.focus();
+  } else {
+    newCatInput.style.display = 'none';
+    newCatInput.value = '';
+  }
 }
 
 // ============ LOGIN ============
@@ -813,9 +1051,31 @@ function renderAdmin(){
   document.getElementById('prod-count').textContent = products.length;
   document.getElementById('buyer-count').textContent = buyers.length;
   
+  // Settings fields
+  var setW = document.getElementById('set-whatsapp');
+  var setE = document.getElementById('set-email');
+  var setP = document.getElementById('set-phone');
+  if(setW && document.activeElement !== setW) setW.value = settings.whatsapp || '';
+  if(setE && document.activeElement !== setE) setE.value = settings.email || '';
+  if(setP && document.activeElement !== setP) setP.value = settings.phone || '';
+  
+  refreshCategories();
   renderOrdersList();
   renderProductsList();
   renderBuyersList();
+}
+
+function saveSettings(){
+  var newSet = {
+    whatsapp: document.getElementById('set-whatsapp').value.trim(),
+    email: document.getElementById('set-email').value.trim(),
+    phone: document.getElementById('set-phone').value.trim()
+  };
+  if(!newSet.whatsapp){ toast('WhatsApp number required', 'er'); return; }
+  socket.emit('admin-update-settings', newSet, function(res){
+    if(res && res.success) toast('✅ Settings saved', 'ok');
+    else toast('❌ Failed to save', 'er');
+  });
 }
 
 function renderOrdersList(){
@@ -827,29 +1087,75 @@ function renderOrdersList(){
   var html = '';
   for(var i=0;i<orders.length;i++){
     var o = orders[i];
-    var date = new Date(o.createdAt || Date.now()).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    var dateObj = new Date(o.createdAt || Date.now());
+    var dateStr = dateObj.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    var timeStr = dateObj.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit',hour12:true});
+    var fullDate = dateStr + ' · ' + timeStr;
+    
+    // Calculate totals
+    var totalQty = 0, totalMrp = 0, totalDp = 0;
     var itemsHtml = '';
     for(var j=0;j<o.items.length;j++){
       var it = o.items[j];
+      totalQty += it.qty;
+      var mrpN = parseFloat(String(it.mrp).replace(/[^0-9.]/g,'')) || 0;
+      var dpN = parseFloat(String(it.dp).replace(/[^0-9.]/g,'')) || 0;
+      totalMrp += mrpN * it.qty;
+      totalDp += dpN * it.qty;
       itemsHtml += '<div class="order-item">' +
-                   '<span class="order-item-name">' + esc(it.name) + ' <small style="color:var(--text3);font-family:SF Mono,monospace">' + esc(it.code) + '</small></span>' +
+                   '<div style="flex:1;min-width:0">' +
+                     '<span class="order-item-name">' + esc(it.name) + '</span>' +
+                     '<div class="order-item-detail">' + esc(it.code) + ' · ' + esc(it.cat || '') + ' · MRP ₹' + esc(it.mrp) + ' · DP ₹' + esc(it.dp) + '</div>' +
+                   '</div>' +
                    '<span class="order-item-qty">×' + it.qty + '</span>' +
                    '</div>';
     }
-    var waText = encodeURIComponent('Hi, I want to confirm Order ' + o.id + ' from ' + (o.buyerName || o.buyerId) + ':\n\n' +
-                                    o.items.map(function(it){ return '• ' + it.name + ' (' + it.code + ') × ' + it.qty; }).join('\n') +
-                                    '\n\nTotal items: ' + o.items.reduce(function(s,it){return s+it.qty;},0));
-    var waLink = 'https://wa.me/' + WHATSAPP + '?text=' + waText;
+    var savings = totalMrp - totalDp;
+    
+    // Build WhatsApp message with full details
+    var waMsg = '🛒 *Order Confirmation*\n';
+    waMsg += '━━━━━━━━━━━━━━━━━━\n';
+    waMsg += '📋 Order ID: *' + o.id + '*\n';
+    waMsg += '📅 Date: ' + dateStr + '\n';
+    waMsg += '🕐 Time: ' + timeStr + '\n';
+    waMsg += '👤 Buyer: *' + (o.buyerName || o.buyerId) + '*\n';
+    if(o.shop) waMsg += '🏪 Shop: ' + o.shop + '\n';
+    waMsg += '\n📦 *Items (' + o.items.length + '):*\n';
+    for(var j=0;j<o.items.length;j++){
+      var it2 = o.items[j];
+      waMsg += '\n' + (j+1) + '. *' + it2.name + '*\n';
+      waMsg += '   Code: ' + it2.code + '\n';
+      waMsg += '   Category: ' + (it2.cat || '—') + '\n';
+      waMsg += '   MRP: ₹' + it2.mrp + ' | DP: ₹' + it2.dp + '\n';
+      waMsg += '   Qty: ' + it2.qty + '\n';
+    }
+    waMsg += '\n━━━━━━━━━━━━━━━━━━\n';
+    waMsg += '📊 *Summary:*\n';
+    waMsg += 'Total Items: ' + totalQty + '\n';
+    waMsg += 'Total MRP: ₹' + totalMrp.toFixed(2) + '\n';
+    waMsg += 'Total Payable: ₹' + totalDp.toFixed(2) + '\n';
+    if(savings > 0) waMsg += 'You Save: ₹' + savings.toFixed(2) + '\n';
+    if(o.notes) waMsg += '\n📝 *Notes:* ' + o.notes + '\n';
+    waMsg += '\nPlease confirm this order. Thank you!';
+    
+    var waLink = 'https://wa.me/' + (settings.whatsapp || '917710729782') + '?text=' + encodeURIComponent(waMsg);
     
     html += '<div class="order ' + (o.status === 'sent' ? 'sent' : '') + '">' +
             '<div class="order-head">' +
               '<div>' +
                 '<div class="order-buyer">👤 ' + esc(o.buyerName || o.buyerId) + (o.shop ? ' <small style="color:var(--text2);font-weight:600">· ' + esc(o.shop) + '</small>' : '') + '</div>' +
-                '<div class="order-meta">' + date + ' · ' + esc(o.id) + '</div>' +
+                '<div class="order-meta">📅 ' + esc(fullDate) + ' · ' + esc(o.id) + '</div>' +
               '</div>' +
               '<span class="order-status ' + (o.status || 'new') + '">' + (o.status === 'sent' ? '✓ Sent' : 'New') + '</span>' +
             '</div>' +
+            (o.notes ? '<div class="order-notes"><b>📝 Buyer Notes:</b>' + esc(o.notes) + '</div>' : '') +
             '<div class="order-items">' + itemsHtml + '</div>' +
+            '<div class="order-summary">' +
+              '<div class="order-summary-row"><span>Total Items</span><span>' + totalQty + '</span></div>' +
+              '<div class="order-summary-row"><span>Total MRP</span><span>₹' + totalMrp.toFixed(2) + '</span></div>' +
+              (savings > 0 ? '<div class="order-summary-row" style="color:var(--green)"><span>Savings</span><span>₹' + savings.toFixed(2) + '</span></div>' : '') +
+              '<div class="order-summary-row total"><span>Total Payable</span><span>₹' + totalDp.toFixed(2) + '</span></div>' +
+            '</div>' +
             '<div class="order-actions">' +
               '<a class="btn-wa" href="' + waLink + '" target="_blank" rel="noopener">💬 WhatsApp</a>' +
               (o.status === 'sent' 
@@ -879,13 +1185,15 @@ function renderProductsList(){
   var html = '';
   for(var i=0;i<products.length;i++){
     var p = products[i];
-    var img = p.img ? '<img src="' + p.img + '" alt="">' : (EMOJIS[p.cat] || '📦');
+    var firstImg = (p.imgs && p.imgs.length > 0) ? p.imgs[0] : (p.img || null);
+    var imgHtml = firstImg ? '<img src="' + firstImg + '" alt="">' : (EMOJIS[p.cat] || '📦');
+    var photoCount = (p.imgs && p.imgs.length > 1) ? ' · 📷 ' + p.imgs.length + ' photos' : '';
     html += '<div class="prod-card">' +
-            '<div class="prod-img">' + img + '</div>' +
+            '<div class="prod-img">' + imgHtml + '</div>' +
             '<div class="prod-info">' +
               '<div class="prod-name">' + esc(p.name) + '</div>' +
               '<span class="prod-code">' + esc(p.code) + '</span>' +
-              '<div class="prod-meta">' + esc(p.cat) + ' · MRP <b>₹' + esc(p.mrp) + '</b> · DP <b>₹' + esc(p.dp) + '</b></div>' +
+              '<div class="prod-meta">' + esc(p.cat) + ' · MRP <b>₹' + esc(p.mrp) + '</b> · DP <b>₹' + esc(p.dp) + '</b>' + photoCount + '</div>' +
             '</div>' +
             '<div class="prod-actions">' +
               '<button class="btn-del" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button>' +
@@ -914,7 +1222,7 @@ function renderBuyersList(){
               '<b>' + esc(b.name || b.id) + '</b>' +
               '<span>' + esc(b.shop || 'No shop') + ' · <code>' + esc(b.id) + '</code> / <code>' + esc(b.pass) + '</code></span>' +
             '</div>' +
-            (b.id === 'buyer1' ? '' : '<button class="btn-del" onclick="deleteBuyer(\'' + esc(b.id) + '\')">🗑️</button>') +
+            '<button class="btn-del" onclick="deleteBuyer(\'' + esc(b.id) + '\')">🗑️</button>' +
             '</div>';
   }
   el.innerHTML = html;
@@ -927,30 +1235,64 @@ function deleteBuyer(id){
 
 // ============ ADMIN: ADD ============
 function handleImage(event){
-  var file = event.target.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    var img = new Image();
-    img.onload = function(){
-      var max = 800;
-      var w = img.width, h = img.height;
-      if(w > max || h > max){
-        if(w > h){ h = (h/w)*max; w = max; }
-        else { w = (w/h)*max; h = max; }
-      }
-      var canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      newImg = canvas.toDataURL('image/jpeg', 0.82);
-      
-      document.getElementById('img-preview').src = newImg;
-      document.getElementById('img-up-label').classList.add('has-img');
-      document.getElementById('img-up-text').textContent = '✓ Image ready (' + Math.round(newImg.length/1024) + ' KB)';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  var files = event.target.files;
+  if(!files || files.length === 0) return;
+  
+  for(var f = 0; f < files.length; f++){
+    (function(file){
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var img = new Image();
+        img.onload = function(){
+          var max = 800;
+          var w = img.width, h = img.height;
+          if(w > max || h > max){
+            if(w > h){ h = (h/w)*max; w = max; }
+            else { w = (w/h)*max; h = max; }
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          newImgs.push(canvas.toDataURL('image/jpeg', 0.82));
+          renderImageThumbs();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    })(files[f]);
+  }
+  // Reset input so same file can be re-added if user wants
+  event.target.value = '';
+}
+
+function renderImageThumbs(){
+  var wrap = document.getElementById('img-thumbs');
+  var icon = document.getElementById('img-up-icon');
+  var text = document.getElementById('img-up-text');
+  if(!wrap) return;
+  
+  if(newImgs.length === 0){
+    wrap.innerHTML = '';
+    if(icon) icon.style.display = 'block';
+    if(text) text.textContent = 'Tap to add photos (multiple allowed)';
+    return;
+  }
+  
+  var html = '';
+  for(var i=0;i<newImgs.length;i++){
+    html += '<div class="thumb">' +
+            '<img src="' + newImgs[i] + '" alt="">' +
+            '<button type="button" class="thumb-rm" onclick="removeImg(' + i + ');event.preventDefault();event.stopPropagation()">×</button>' +
+            '</div>';
+  }
+  wrap.innerHTML = html;
+  if(icon) icon.style.display = 'none';
+  if(text) text.textContent = '✓ ' + newImgs.length + ' photo(s) added — tap to add more';
+}
+
+function removeImg(idx){
+  newImgs.splice(idx, 1);
+  renderImageThumbs();
 }
 
 function addProduct(){
@@ -958,7 +1300,9 @@ function addProduct(){
   var code = document.getElementById('np-code').value.trim();
   var mrp = document.getElementById('np-mrp').value.trim();
   var dp = document.getElementById('np-dp').value.trim();
-  var cat = document.getElementById('np-cat').value;
+  var catSel = document.getElementById('np-cat').value;
+  var newCatInput = document.getElementById('np-newcat').value.trim();
+  var cat = catSel === '__new__' ? newCatInput : catSel;
   var desc = document.getElementById('np-desc').value.trim();
   var insta = document.getElementById('np-insta').value.trim();
   
@@ -966,6 +1310,8 @@ function addProduct(){
   if(!code){ toast('Product code required', 'er'); return; }
   if(!mrp){ toast('MRP required', 'er'); return; }
   if(!dp){ toast('Dealer Price required', 'er'); return; }
+  if(catSel === '__new__' && !newCatInput){ toast('Type the new category name', 'er'); return; }
+  if(!cat){ toast('Category required', 'er'); return; }
   
   if(products.find(function(p){ return p.code.toLowerCase() === code.toLowerCase(); })){
     toast('Code "' + code + '" already exists', 'er');
@@ -977,7 +1323,9 @@ function addProduct(){
   var product = {
     id: 'P' + Date.now() + Math.floor(Math.random()*1000),
     name: name, code: code, mrp: mrp, dp: dp, cat: cat,
-    desc: desc, insta: insta, img: newImg,
+    desc: desc, insta: insta,
+    imgs: newImgs.slice(), // copy array of images
+    img: newImgs[0] || null, // legacy single image for backwards compat
     createdAt: new Date().toISOString()
   };
   
@@ -998,7 +1346,7 @@ function addProduct(){
   
   setTimeout(function(){
     if(!done){ finishUpload(false); toast('⚠️ Server timeout', 'er'); }
-  }, 12000);
+  }, 15000);
 }
 
 function clearProductForm(){
@@ -1007,13 +1355,13 @@ function clearProductForm(){
   document.getElementById('np-mrp').value = '';
   document.getElementById('np-dp').value = '';
   document.getElementById('np-cat').selectedIndex = 0;
+  document.getElementById('np-newcat').value = '';
+  document.getElementById('np-newcat').style.display = 'none';
   document.getElementById('np-desc').value = '';
   document.getElementById('np-insta').value = '';
   document.getElementById('img-input').value = '';
-  document.getElementById('img-preview').src = '';
-  document.getElementById('img-up-label').classList.remove('has-img');
-  document.getElementById('img-up-text').textContent = 'Tap to choose product photo';
-  newImg = null;
+  newImgs = [];
+  renderImageThumbs();
 }
 
 function addBuyer(){
@@ -1103,10 +1451,13 @@ function renderStore(){
     var ph = '';
     for(var i=0;i<filtered.length;i++){
       var p = filtered[i];
-      var img = p.img ? '<img src="' + p.img + '" alt="' + esc(p.name) + '">' : (EMOJIS[p.cat] || '📦');
+      var firstImg = (p.imgs && p.imgs.length > 0) ? p.imgs[0] : (p.img || null);
+      var img = firstImg ? '<img src="' + firstImg + '" alt="' + esc(p.name) + '">' : (EMOJIS[p.cat] || '📦');
+      var photoBadge = (p.imgs && p.imgs.length > 1) ? '<span class="product-cat-tag" style="left:auto;right:8px;background:rgba(255,107,53,0.95)">📷 ' + p.imgs.length + '</span>' : '';
       ph += '<div class="product" onclick="openProduct(\'' + p.id + '\')">' +
             '<div class="product-img">' + img +
               '<span class="product-cat-tag">' + esc(p.cat) + '</span>' +
+              photoBadge +
             '</div>' +
             '<div class="product-info">' +
               '<div class="product-name">' + esc(p.name) + '</div>' +
@@ -1137,8 +1488,14 @@ function openProduct(id){
   if(!p) return;
   modalProduct = p;
   modalQty = 1;
+  modalImgIdx = 0;
   
-  document.getElementById('pd-img').innerHTML = p.img ? '<img src="' + p.img + '" alt="">' : (EMOJIS[p.cat] || '📦');
+  // Build images array (legacy support: prefer imgs array, fallback to img single)
+  var imgs = (p.imgs && p.imgs.length > 0) ? p.imgs : (p.img ? [p.img] : []);
+  modalProduct._imgs = imgs;
+  
+  renderProductImg();
+  
   document.getElementById('pd-cat').textContent = p.cat;
   document.getElementById('pd-name').textContent = p.name;
   document.getElementById('pd-code').textContent = p.code;
@@ -1158,6 +1515,94 @@ function openProduct(id){
   document.getElementById('modal-product').classList.add('on');
 }
 
+function renderProductImg(){
+  if(!modalProduct) return;
+  var imgs = modalProduct._imgs || [];
+  var imgEl = document.getElementById('pd-img');
+  var prevBtn = document.getElementById('pd-img-prev');
+  var nextBtn = document.getElementById('pd-img-next');
+  var dotsEl = document.getElementById('pd-img-dots');
+  
+  if(imgs.length === 0){
+    imgEl.innerHTML = EMOJIS[modalProduct.cat] || '📦';
+    prevBtn.classList.remove('show');
+    nextBtn.classList.remove('show');
+    dotsEl.innerHTML = '';
+    return;
+  }
+  
+  imgEl.innerHTML = '<img src="' + imgs[modalImgIdx] + '" alt="">';
+  
+  if(imgs.length > 1){
+    prevBtn.classList.add('show');
+    nextBtn.classList.add('show');
+    var dotsHtml = '';
+    for(var i=0;i<imgs.length;i++){
+      dotsHtml += '<div class="pd-img-dot ' + (i === modalImgIdx ? 'on' : '') + '"></div>';
+    }
+    dotsEl.innerHTML = dotsHtml;
+  } else {
+    prevBtn.classList.remove('show');
+    nextBtn.classList.remove('show');
+    dotsEl.innerHTML = '';
+  }
+}
+
+function pdPrev(){
+  if(!modalProduct || !modalProduct._imgs) return;
+  var len = modalProduct._imgs.length;
+  if(len === 0) return;
+  modalImgIdx = (modalImgIdx - 1 + len) % len;
+  renderProductImg();
+}
+
+function pdNext(){
+  if(!modalProduct || !modalProduct._imgs) return;
+  var len = modalProduct._imgs.length;
+  if(len === 0) return;
+  modalImgIdx = (modalImgIdx + 1) % len;
+  renderProductImg();
+}
+
+function zoomCurrent(){
+  if(!modalProduct || !modalProduct._imgs || modalProduct._imgs.length === 0) return;
+  zoomImgs = modalProduct._imgs;
+  zoomIdx = modalImgIdx;
+  showZoom();
+}
+
+function showZoom(){
+  if(zoomImgs.length === 0) return;
+  document.getElementById('zoom-img').src = zoomImgs[zoomIdx];
+  if(zoomImgs.length > 1){
+    document.getElementById('zoom-prev').classList.add('show');
+    document.getElementById('zoom-next').classList.add('show');
+    document.getElementById('zoom-counter').classList.add('show');
+    document.getElementById('zoom-counter').textContent = (zoomIdx + 1) + ' / ' + zoomImgs.length;
+  } else {
+    document.getElementById('zoom-prev').classList.remove('show');
+    document.getElementById('zoom-next').classList.remove('show');
+    document.getElementById('zoom-counter').classList.remove('show');
+  }
+  document.getElementById('zoom-bg').classList.add('on');
+}
+
+function closeZoom(){
+  document.getElementById('zoom-bg').classList.remove('on');
+}
+
+function zoomPrev(){
+  if(zoomImgs.length === 0) return;
+  zoomIdx = (zoomIdx - 1 + zoomImgs.length) % zoomImgs.length;
+  showZoom();
+}
+
+function zoomNext(){
+  if(zoomImgs.length === 0) return;
+  zoomIdx = (zoomIdx + 1) % zoomImgs.length;
+  showZoom();
+}
+
 function changeModalQty(delta){
   modalQty = Math.max(1, modalQty + delta);
   document.getElementById('pd-qty').textContent = modalQty;
@@ -1165,6 +1610,7 @@ function changeModalQty(delta){
 
 function addToCart(){
   if(!modalProduct) return;
+  var firstImg = (modalProduct._imgs && modalProduct._imgs.length > 0) ? modalProduct._imgs[0] : modalProduct.img;
   var existing = cart.find(function(c){ return c.id === modalProduct.id; });
   if(existing){
     existing.qty += modalQty;
@@ -1172,7 +1618,7 @@ function addToCart(){
     cart.push({
       id: modalProduct.id, name: modalProduct.name, code: modalProduct.code,
       cat: modalProduct.cat, mrp: modalProduct.mrp, dp: modalProduct.dp,
-      img: modalProduct.img, qty: modalQty
+      img: firstImg, qty: modalQty
     });
   }
   closeModal('modal-product');
@@ -1201,13 +1647,20 @@ function renderCart(){
     el.innerHTML = '<div class="empty"><div class="icon">🛒</div><p>Cart is empty</p></div>';
     document.getElementById('place-btn').disabled = true;
     document.getElementById('cart-total-qty').textContent = '0';
+    document.getElementById('cart-total-mrp').textContent = '₹0';
+    document.getElementById('cart-savings').textContent = '₹0';
+    document.getElementById('cart-total-dp').textContent = '₹0';
     return;
   }
   var html = '';
-  var totalQty = 0;
+  var totalQty = 0, totalMrp = 0, totalDp = 0;
   for(var i=0;i<cart.length;i++){
     var c = cart[i];
     totalQty += c.qty;
+    var mrpN = parseFloat(String(c.mrp).replace(/[^0-9.]/g,'')) || 0;
+    var dpN = parseFloat(String(c.dp).replace(/[^0-9.]/g,'')) || 0;
+    totalMrp += mrpN * c.qty;
+    totalDp += dpN * c.qty;
     var img = c.img ? '<img src="' + c.img + '" alt="">' : (EMOJIS[c.cat] || '📦');
     html += '<div class="cart-item">' +
             '<div class="cart-item-img">' + img + '</div>' +
@@ -1215,7 +1668,7 @@ function renderCart(){
               '<div class="cart-item-name">' + esc(c.name) + '</div>' +
               '<div class="cart-item-code">' + esc(c.code) + '</div>' +
               '<div class="cart-item-bottom">' +
-                '<span class="cart-item-price">₹' + esc(c.dp) + ' each</span>' +
+                '<span class="cart-item-price">₹' + esc(c.dp) + ' × ' + c.qty + ' = ₹' + (dpN * c.qty).toFixed(2) + '</span>' +
                 '<div class="cart-item-qty">' +
                   '<button onclick="cartQty(\'' + c.id + '\',-1)">−</button>' +
                   '<span>' + c.qty + '</span>' +
@@ -1227,7 +1680,12 @@ function renderCart(){
             '</div>';
   }
   el.innerHTML = html;
+  
+  var savings = totalMrp - totalDp;
   document.getElementById('cart-total-qty').textContent = totalQty;
+  document.getElementById('cart-total-mrp').textContent = '₹' + totalMrp.toFixed(2);
+  document.getElementById('cart-savings').textContent = '₹' + savings.toFixed(2);
+  document.getElementById('cart-total-dp').textContent = '₹' + totalDp.toFixed(2);
   document.getElementById('place-btn').disabled = false;
 }
 
@@ -1249,12 +1707,15 @@ function placeOrder(){
   if(cart.length === 0) return;
   if(!socket.connected){ toast('Not connected', 'er'); return; }
   
+  var notes = (document.getElementById('cart-notes').value || '').trim();
+  
   var order = {
     buyerId: currentUser.id,
     buyerName: currentUser.name,
     shop: currentUser.shop,
+    notes: notes,
     items: cart.map(function(c){
-      return { id:c.id, name:c.name, code:c.code, qty:c.qty, dp:c.dp, mrp:c.mrp };
+      return { id:c.id, name:c.name, code:c.code, cat:c.cat, qty:c.qty, dp:c.dp, mrp:c.mrp };
     })
   };
   
@@ -1265,6 +1726,7 @@ function placeOrder(){
     document.getElementById('place-btn').textContent = 'Place Order';
     if(res && res.success){
       cart = [];
+      document.getElementById('cart-notes').value = '';
       closeModal('modal-cart');
       toast('🎉 Order placed! Distributor notified.', 'ok');
       updateCartBadge();
@@ -1287,6 +1749,11 @@ function showHistory(){
       var o = myOrders[i];
       var date = new Date(o.createdAt).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
       var totalQ = o.items.reduce(function(s,it){ return s + it.qty; }, 0);
+      var totalDp = 0;
+      o.items.forEach(function(it){
+        var n = parseFloat(String(it.dp).replace(/[^0-9.]/g,'')) || 0;
+        totalDp += n * it.qty;
+      });
       html += '<div class="cart-item" style="flex-direction:column;align-items:stretch">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
                 '<div>' +
@@ -1296,14 +1763,33 @@ function showHistory(){
                 '<span class="order-status ' + (o.status || 'new') + '">' + (o.status === 'sent' ? '✓ Delivered' : 'Pending') + '</span>' +
               '</div>' +
               '<div style="background:#f9fafb;border-radius:8px;padding:10px;font-size:13px">' +
-                o.items.map(function(it){ return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>' + esc(it.name) + '</span><b style="color:var(--orange)">×' + it.qty + '</b></div>'; }).join('') +
+                o.items.map(function(it){ return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>' + esc(it.name) + ' <small style="color:var(--text3)">' + esc(it.code) + '</small></span><b style="color:var(--orange)">×' + it.qty + '</b></div>'; }).join('') +
               '</div>' +
-              '<div style="text-align:right;margin-top:8px;font-size:12px;color:var(--text2)">Total: <b>' + totalQ + ' items</b></div>' +
+              (o.notes ? '<div style="background:#fef3c7;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#78350f"><b>📝 Notes:</b> ' + esc(o.notes) + '</div>' : '') +
+              '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:13px"><span style="color:var(--text2);font-weight:600">' + totalQ + ' items</span><b style="color:var(--orange);font-size:15px">₹' + totalDp.toFixed(2) + '</b></div>' +
               '</div>';
     }
     el.innerHTML = html;
   }
   document.getElementById('modal-history').classList.add('on');
+}
+
+function showContact(){
+  var wa = settings.whatsapp || '917710729782';
+  var phone = settings.phone || '+91 77107 29782';
+  var email = settings.email || 'Satyamyadav19125@gmail.com';
+  
+  var waLink = 'https://wa.me/' + wa + '?text=' + encodeURIComponent('Hi, I have a question about my order.');
+  var phoneClean = phone.replace(/[^0-9+]/g, '');
+  
+  document.getElementById('contact-wa').href = waLink;
+  document.getElementById('contact-wa-num').textContent = phone;
+  document.getElementById('contact-phone').href = 'tel:' + phoneClean;
+  document.getElementById('contact-phone-num').textContent = phone;
+  document.getElementById('contact-email').href = 'mailto:' + email;
+  document.getElementById('contact-email-addr').textContent = email;
+  
+  document.getElementById('modal-contact').classList.add('on');
 }
 
 // ============ MODAL ============
@@ -1330,6 +1816,19 @@ function toast(msg, type){
   t.className = 'toast on' + (type ? ' ' + type : '');
   setTimeout(function(){ t.classList.remove('on'); }, 3000);
 }
+
+// Keyboard navigation for image zoom
+document.addEventListener('keydown', function(e){
+  if(document.getElementById('zoom-bg').classList.contains('on')){
+    if(e.key === 'Escape') closeZoom();
+    else if(e.key === 'ArrowLeft') zoomPrev();
+    else if(e.key === 'ArrowRight') zoomNext();
+  } else if(document.getElementById('modal-product').classList.contains('on')){
+    if(e.key === 'ArrowLeft') pdPrev();
+    else if(e.key === 'ArrowRight') pdNext();
+    else if(e.key === 'Escape') closeModal('modal-product');
+  }
+});
 </script>
 
 </body>
