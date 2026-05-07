@@ -16,23 +16,23 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: { origin: '*' },
-  maxHttpBufferSize: 1e8,    // 100MB - allows big base64 images
+  maxHttpBufferSize: 1e8,
   pingTimeout: 60000,
   pingInterval: 25000
 });
 
-const PORT          = process.env.PORT || 3000;
-const MONGODB_URI   = process.env.MONGODB_URI || '';
-const USE_MONGO     = MONGODB_URI.length > 0;
+const PORT        = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || '';
+const USE_MONGO   = MONGODB_URI.length > 0;
 
 // ============================================================
-// JSON FILE FALLBACK (used only if no MONGODB_URI is set)
+// JSON FILE FALLBACK
 // ============================================================
-const DATA_DIR       = path.join(__dirname, 'data');
-const PRODUCTS_FILE  = path.join(DATA_DIR, 'products.json');
-const ORDERS_FILE    = path.join(DATA_DIR, 'orders.json');
-const BUYERS_FILE    = path.join(DATA_DIR, 'buyers.json');
-const SETTINGS_FILE  = path.join(DATA_DIR, 'settings.json');
+const DATA_DIR      = path.join(__dirname, 'data');
+const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
+const ORDERS_FILE   = path.join(DATA_DIR, 'orders.json');
+const BUYERS_FILE   = path.join(DATA_DIR, 'buyers.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 if (!fs.existsSync(DATA_DIR)) { try { fs.mkdirSync(DATA_DIR); } catch(e) {} }
 
@@ -47,7 +47,7 @@ function saveFile(file, data) {
 }
 
 // ============================================================
-// In-memory cache (kept in sync with DB / files)
+// In-memory cache
 // ============================================================
 let products = [];
 let orders   = [];
@@ -65,7 +65,6 @@ let settings = {
 let Product, Order, Buyer, SettingsModel;
 
 if (USE_MONGO) {
-  // strict:false -> we can store any extra fields without re-defining the schema
   Product = mongoose.model('Product', new mongoose.Schema({
     id: { type: String, index: true, unique: true }
   }, { strict: false, collection: 'products', timestamps: false }));
@@ -111,7 +110,6 @@ async function loadAll() {
         await SettingsModel.create({ _id: 'main', ...settings });
       }
 
-      // Seed a demo buyer if none exists yet
       if (buyers.length === 0) {
         const demo = { id: 'buyer1', pass: '1234', name: 'Demo Buyer', shop: 'Demo Shop' };
         await Buyer.create(demo);
@@ -129,7 +127,7 @@ async function loadAll() {
     settings = Object.assign(settings, loadFile(SETTINGS_FILE, {}));
     saveFile(BUYERS_FILE, buyers);
     saveFile(SETTINGS_FILE, settings);
-    console.log(`⚠ Loaded from JSON files (NOT PERSISTENT on Render): ${products.length}p, ${orders.length}o, ${buyers.length}b`);
+    console.log(`⚠ Loaded from JSON files: ${products.length}p, ${orders.length}o, ${buyers.length}b`);
   }
 }
 
@@ -144,7 +142,7 @@ function stripMongo(doc) {
 // PERSISTENCE HELPERS
 // ============================================================
 async function saveProducts() {
-  if (USE_MONGO) return; // we write per-product in handlers
+  if (USE_MONGO) return;
   saveFile(PRODUCTS_FILE, products);
 }
 async function saveOrders() {
@@ -170,17 +168,9 @@ async function saveSettings() {
 // ============================================================
 async function connectDB() {
   if (!USE_MONGO) {
-    console.warn('');
-    console.warn('================================================================');
-    console.warn('⚠️  WARNING: MONGODB_URI environment variable is not set!');
-    console.warn('   Data will be saved to JSON files only.');
-    console.warn('   On Render free tier, this data will be LOST on every restart.');
-    console.warn('   See DEPLOYMENT_GUIDE.md to set up free MongoDB Atlas.');
-    console.warn('================================================================');
-    console.warn('');
+    console.warn('⚠️  WARNING: MONGODB_URI not set. Data saved to JSON files only.');
     return;
   }
-
   try {
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
@@ -189,7 +179,6 @@ async function connectDB() {
     console.log('✓ MongoDB Atlas connected');
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
-    console.error('  Check your MONGODB_URI environment variable.');
   }
 }
 
@@ -224,21 +213,16 @@ io.on('connection', (socket) => {
   socket.on('admin-add-product', async (product, ack) => {
     if (!product || !product.id) { ack && ack({ success: false, error: 'Invalid product' }); return; }
     if (products.find(p => p.code && product.code && p.code.toLowerCase() === product.code.toLowerCase())) {
-      ack && ack({ success: false, error: 'Product code already exists' });
-      return;
+      ack && ack({ success: false, error: 'Product code already exists' }); return;
     }
-
     try {
       if (USE_MONGO) await Product.create(product);
       products.unshift(product);
-
-      // Auto-add new category if user typed one
       if (product.cat && settings.categories.indexOf(product.cat) === -1) {
         settings.categories.push(product.cat);
         await saveSettings();
         io.emit('settings-update', settings);
       }
-
       await saveProducts();
       io.emit('products-update', products);
       ack && ack({ success: true });
@@ -253,7 +237,6 @@ io.on('connection', (socket) => {
     if (!product || !product.id) { ack && ack({ success: false }); return; }
     const idx = products.findIndex(p => p.id === product.id);
     if (idx < 0) { ack && ack({ success: false }); return; }
-
     try {
       if (USE_MONGO) await Product.updateOne({ id: product.id }, { $set: product });
       products[idx] = product;
@@ -261,7 +244,6 @@ io.on('connection', (socket) => {
       io.emit('products-update', products);
       ack && ack({ success: true });
     } catch (e) {
-      console.error('Update product err:', e.message);
       ack && ack({ success: false, error: e.message });
     }
   });
@@ -322,7 +304,6 @@ io.on('connection', (socket) => {
       io.emit('buyers-update', buyers);
       ack && ack({ success: true });
     } catch (e) {
-      console.error('Add buyer err:', e.message);
       ack && ack({ success: false, error: e.message });
     }
   });
@@ -348,7 +329,6 @@ io.on('connection', (socket) => {
       io.emit('settings-update', settings);
       ack && ack({ success: true });
     } catch (e) {
-      console.error('Save settings err:', e.message);
       ack && ack({ success: false });
     }
   });
@@ -366,13 +346,28 @@ io.on('connection', (socket) => {
     ack && ack({ success: true });
   });
 
+  // ----- DELETE CATEGORY (NEW) -----
+  socket.on('admin-delete-category', async (catName, ack) => {
+    if (!catName || typeof catName !== 'string') { ack && ack({ success: false }); return; }
+    const idx = settings.categories.indexOf(catName);
+    if (idx === -1) { ack && ack({ success: false, error: 'Category not found' }); return; }
+    try {
+      settings.categories.splice(idx, 1);
+      await saveSettings();
+      io.emit('settings-update', settings);
+      ack && ack({ success: true });
+    } catch (e) {
+      console.error('Delete category err:', e.message);
+      ack && ack({ success: false, error: e.message });
+    }
+  });
+
   // ----- PLACE ORDER -----
   socket.on('place-order', async (order, ack) => {
     if (!order || !order.items || !order.buyerId) { ack && ack({ success: false, error: 'Invalid order' }); return; }
     order.id        = 'O' + Date.now();
     order.status    = 'new';
     order.createdAt = new Date().toISOString();
-
     try {
       if (USE_MONGO) await Order.create(order);
       orders.unshift(order);
@@ -380,7 +375,6 @@ io.on('connection', (socket) => {
       io.emit('orders-update', orders);
       ack && ack({ success: true, orderId: order.id });
     } catch (e) {
-      console.error('Place order err:', e.message);
       ack && ack({ success: false, error: e.message });
     }
   });
