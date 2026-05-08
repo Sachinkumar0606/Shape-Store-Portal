@@ -711,8 +711,7 @@ function loadStorageStats(){
     /* Warning level */
     var warnClass=pct<60?'ok':pct<85?'warn':'danger';
     var warnIcon=pct<60?'✅':pct<85?'⚠️':'🚨';
-    var warnMsg=pct<60?'Storage looks healthy':'Getting full — consider deleting old orders':pct<85?'Getting full — consider deleting old orders':'Critical — delete data soon!';
-    if(pct>=85)warnMsg='Critical — delete old orders or products!';
+    var warnMsg=pct<60?'Storage looks healthy':(pct<85?'Getting full — consider deleting old orders':'Critical — delete old orders or products!');
 
     function fmtMB(mb){return mb>=1?mb.toFixed(1)+' MB':(mb*1024).toFixed(0)+' KB';}
 
