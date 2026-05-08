@@ -198,6 +198,40 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/storage-stats', async (req, res) => {
+  if (!USE_MONGO || mongoose.connection.readyState !== 1) {
+    return res.json({ error: 'MongoDB not connected', usedBytes: 0, freeBytes: 536870912 });
+  }
+  try {
+    const db = mongoose.connection.db;
+    const COLLECTIONS = ['products', 'orders', 'buyers', 'settings'];
+    const breakdown = {};
+    let totalBytes = 0;
+    for (const name of COLLECTIONS) {
+      try {
+        const s = await db.collection(name).stats({ scale: 1 });
+        const sz = (s.size || 0) + (s.totalIndexSize || 0);
+        breakdown[name] = sz;
+        totalBytes += sz;
+      } catch(e) {
+        breakdown[name] = 0;
+      }
+    }
+    const FREE_TIER_BYTES = 536870912; // 512 MB
+    res.json({
+      usedBytes: totalBytes,
+      freeBytes: Math.max(0, FREE_TIER_BYTES - totalBytes),
+      totalBytes: FREE_TIER_BYTES,
+      breakdown,
+      usedMB: (totalBytes / 1048576).toFixed(2),
+      totalMB: 512,
+      pct: Math.min(100, ((totalBytes / FREE_TIER_BYTES) * 100).toFixed(1))
+    });
+  } catch(e) {
+    res.json({ error: e.message, usedBytes: 0, freeBytes: 536870912 });
+  }
+});
+
 // ============================================================
 // SOCKET.IO
 // ============================================================
