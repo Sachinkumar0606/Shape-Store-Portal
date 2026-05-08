@@ -367,6 +367,28 @@ html,body{font-family:'Manrope',sans-serif;font-size:14px;background:var(--bg);c
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--card);color:var(--text);border:1px solid var(--border);padding:11px 20px;border-radius:10px;z-index:400;font-weight:700;font-size:13px;box-shadow:0 12px 30px var(--shadow);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);max-width:90vw;white-space:nowrap}
 .toast.on{transform:translateX(-50%) translateY(0)}.toast.ok{background:var(--green);color:#fff;border-color:var(--green)}.toast.er{background:var(--red);color:#fff;border-color:var(--red)}
 .img-tip{font-size:11px;color:var(--text2);font-weight:600;margin-top:5px;display:flex;align-items:center;gap:4px;justify-content:center}.img-tip::before{content:'💡 '}
+
+/* ===== STORAGE CARD (iPhone style) ===== */
+.storage-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.storage-used-text{font-size:22px;font-weight:800;color:var(--text);font-family:'DM Serif Display',serif}
+.storage-used-sub{font-size:11px;color:var(--text3);font-weight:600;margin-top:2px}
+.storage-pct-badge{font-size:13px;font-weight:800;padding:5px 11px;border-radius:99px;background:var(--card2);border:1px solid var(--border)}
+.storage-bar-track{height:14px;background:var(--bg);border-radius:99px;overflow:hidden;display:flex;margin-bottom:14px;border:1px solid var(--border)}
+.storage-bar-seg{height:100%;transition:width 0.8s cubic-bezier(0.4,0,0.2,1)}
+.storage-bar-seg:first-child{border-radius:99px 0 0 99px}
+.storage-bar-seg:last-child{border-radius:0 99px 99px 0}
+.storage-legend{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.storage-legend-item{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--card2);border-radius:9px;border:1px solid var(--border)}
+.storage-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.storage-legend-info{flex:1;min-width:0}
+.storage-legend-label{font-size:11px;font-weight:700;color:var(--text);margin-bottom:1px}
+.storage-legend-size{font-size:10px;color:var(--text3);font-weight:600}
+.storage-warning{margin-top:12px;padding:10px 13px;border-radius:9px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.storage-warning.ok{background:rgba(16,185,129,0.1);color:var(--green);border:1px solid rgba(16,185,129,0.2)}
+.storage-warning.warn{background:rgba(251,191,36,0.1);color:#fbbf24;border:1px solid rgba(251,191,36,0.2)}
+.storage-warning.danger{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.storage-refresh-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px}
+.storage-refresh-btn:hover{color:var(--orange)}
 </style>
 </head>
 <body>
@@ -449,6 +471,19 @@ html,body{font-family:'Manrope',sans-serif;font-size:14px;background:var(--bg);c
         <div class="info-block">
           <p><b>Shape Trade Portal</b> — v2.1.0</p>
           <p style="margin-top:5px">Storage status: <span id="storage-status" style="color:var(--green)">Checking...</span></p>
+        </div>
+      </div>
+
+      <!-- iPhone-style Storage Card -->
+      <div class="card" id="storage-card">
+        <div class="card-title">
+          💾 MongoDB Storage
+          <button class="storage-refresh-btn" onclick="loadStorageStats()" title="Refresh storage">🔄</button>
+        </div>
+        <div id="storage-display">
+          <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">
+            <div style="font-size:28px;margin-bottom:8px">⏳</div>Loading storage info...
+          </div>
         </div>
       </div>
       <div class="admin-dev-footer">Built by <b>Satyam Yadav</b> · <a href="tel:+917710729782">+91 77107 29782</a></div>
@@ -649,7 +684,66 @@ function onCatChange(){var sel=document.getElementById('np-cat');var inp=documen
 function doLogin(){var id=document.getElementById('login-id').value.trim();var pw=document.getElementById('login-pw').value;var err=document.getElementById('login-err');err.textContent='';if(id==='admin'&&pw==='shape2026'){currentUser={id:'admin',role:'admin',name:'Admin'};showPage('p-admin');renderAdmin();}else{var b=buyers.find(function(x){return x.id.toLowerCase()===id.toLowerCase()&&x.pass===pw;});if(b){currentUser={id:b.id,role:'buyer',name:b.name||b.id,shop:b.shop};document.getElementById('buyer-name').textContent=currentUser.name;document.getElementById('buyer-sub').textContent=currentUser.shop||'Buyer Portal';showPage('p-buyer');renderStore();}else{err.textContent='Wrong username or password';return;}}document.getElementById('login-id').value='';document.getElementById('login-pw').value='';}
 function doLogout(){currentUser=null;cart=[];showPage('p-login');}
 function showPage(id){document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});document.getElementById(id).classList.add('on');/* Sync theme buttons */var icon=_theme==='dark'?'🌙':'☀️';var b1=document.getElementById('theme-btn');var b2=document.getElementById('theme-btn-buyer');if(b1)b1.textContent=icon;if(b2)b2.textContent=icon;}
-function setAdminTab(name,btn){document.querySelectorAll('.admin-tab').forEach(function(t){t.classList.remove('on');});btn.classList.add('on');document.querySelectorAll('.admin-tabpanel').forEach(function(p){p.classList.remove('on');});document.getElementById('tab-'+name).classList.add('on');}
+function setAdminTab(name,btn){document.querySelectorAll('.admin-tab').forEach(function(t){t.classList.remove('on');});btn.classList.add('on');document.querySelectorAll('.admin-tabpanel').forEach(function(p){p.classList.remove('on');});document.getElementById('tab-'+name).classList.add('on');if(name==='settings')loadStorageStats();}
+
+function loadStorageStats(){
+  var el=document.getElementById('storage-display');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">⏳ Fetching storage data...</div>';
+  fetch('/storage-stats').then(function(r){return r.json();}).then(function(d){
+    if(d.error&&d.usedBytes===0){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">⚠️ '+d.error+'</div>';return;}
+    var TOTAL_MB=512;
+    var usedMB=parseFloat(d.usedMB)||0;
+    var pct=parseFloat(d.pct)||0;
+    var freeMB=(TOTAL_MB-usedMB).toFixed(2);
+    var b=d.breakdown||{};
+
+    /* Segment sizes as % of total */
+    function toMB(bytes){return((bytes||0)/1048576);}
+    var prodMB=toMB(b.products);
+    var ordMB=toMB(b.orders);
+    var buyMB=toMB(b.buyers);
+    var setMB=toMB(b.settings);
+    var otherMB=Math.max(0,usedMB-prodMB-ordMB-buyMB-setMB);
+    var T=TOTAL_MB;
+    function pctOf(mb){return Math.max(0,Math.min(100,(mb/T*100))).toFixed(2);}
+
+    /* Warning level */
+    var warnClass=pct<60?'ok':pct<85?'warn':'danger';
+    var warnIcon=pct<60?'✅':pct<85?'⚠️':'🚨';
+    var warnMsg=pct<60?'Storage looks healthy':'Getting full — consider deleting old orders':pct<85?'Getting full — consider deleting old orders':'Critical — delete data soon!';
+    if(pct>=85)warnMsg='Critical — delete old orders or products!';
+
+    function fmtMB(mb){return mb>=1?mb.toFixed(1)+' MB':(mb*1024).toFixed(0)+' KB';}
+
+    el.innerHTML=
+      '<div class="storage-header">'+
+        '<div>'+
+          '<div class="storage-used-text">'+fmtMB(usedMB)+' <span style="font-size:14px;color:var(--text2);font-family:Manrope">used</span></div>'+
+          '<div class="storage-used-sub">of 512 MB free tier · '+fmtMB(parseFloat(freeMB))+' free</div>'+
+        '</div>'+
+        '<div class="storage-pct-badge" style="color:'+(pct<60?'var(--green)':pct<85?'#fbbf24':'var(--red)')+'">'+pct+'%</div>'+
+      '</div>'+
+      /* Bar */
+      '<div class="storage-bar-track">'+
+        (prodMB>0?'<div class="storage-bar-seg" style="width:'+pctOf(prodMB)+'%;background:#ff6b35"></div>':'')+
+        (ordMB>0?'<div class="storage-bar-seg" style="width:'+pctOf(ordMB)+'%;background:#3b82f6"></div>':'')+
+        (buyMB>0?'<div class="storage-bar-seg" style="width:'+pctOf(buyMB)+'%;background:#10b981"></div>':'')+
+        (otherMB>0?'<div class="storage-bar-seg" style="width:'+pctOf(otherMB)+'%;background:#8b5cf6"></div>':'')+
+        '<div class="storage-bar-seg" style="width:'+pctOf(parseFloat(freeMB))+'%;background:var(--border);border-radius:0 99px 99px 0"></div>'+
+      '</div>'+
+      /* Legend */
+      '<div class="storage-legend">'+
+        '<div class="storage-legend-item"><div class="storage-legend-dot" style="background:#ff6b35"></div><div class="storage-legend-info"><div class="storage-legend-label">📦 Products</div><div class="storage-legend-size">'+fmtMB(prodMB)+' (photos + data)</div></div></div>'+
+        '<div class="storage-legend-item"><div class="storage-legend-dot" style="background:#3b82f6"></div><div class="storage-legend-info"><div class="storage-legend-label">🛒 Orders</div><div class="storage-legend-size">'+fmtMB(ordMB)+'</div></div></div>'+
+        '<div class="storage-legend-item"><div class="storage-legend-dot" style="background:#10b981"></div><div class="storage-legend-info"><div class="storage-legend-label">👥 Buyers</div><div class="storage-legend-size">'+fmtMB(buyMB)+'</div></div></div>'+
+        '<div class="storage-legend-item"><div class="storage-legend-dot" style="background:var(--border)"></div><div class="storage-legend-info"><div class="storage-legend-label">🆓 Free</div><div class="storage-legend-size">'+fmtMB(parseFloat(freeMB))+' remaining</div></div></div>'+
+      '</div>'+
+      '<div class="storage-warning '+warnClass+'">'+warnIcon+' '+warnMsg+'</div>';
+  }).catch(function(){
+    el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">❌ Could not load storage data</div>';
+  });
+}
 function renderAdmin(){var no=orders.filter(function(o){return o.status==='new';}).length;document.getElementById('stat-new').textContent=no;document.getElementById('stat-total').textContent=orders.length;document.getElementById('stat-products').textContent=products.length;document.getElementById('stat-buyers').textContent=buyers.length;document.getElementById('orders-count').textContent=orders.length;document.getElementById('prod-count').textContent=products.length;document.getElementById('buyer-count').textContent=buyers.length;var sW=document.getElementById('set-whatsapp');var sE=document.getElementById('set-email');var sP=document.getElementById('set-phone');if(sW&&document.activeElement!==sW)sW.value=settings.whatsapp||'';if(sE&&document.activeElement!==sE)sE.value=settings.email||'';if(sP&&document.activeElement!==sP)sP.value=settings.phone||'';refreshCategories();renderOrdersList();renderProductsList();renderBuyersList();renderCategoriesList();}
 function saveSettings(){var ns={whatsapp:document.getElementById('set-whatsapp').value.trim(),email:document.getElementById('set-email').value.trim(),phone:document.getElementById('set-phone').value.trim()};if(!ns.whatsapp){toast('WhatsApp number required','er');return;}socket.emit('admin-update-settings',ns,function(res){if(res&&res.success)toast('✅ Settings saved','ok');else toast('❌ Failed','er');});}
 function renderCategoriesList(){var el=document.getElementById('cat-manage-list');var cats=settings.categories||[];var ce=document.getElementById('cat-count');if(ce)ce.textContent=cats.length;if(cats.length===0){el.innerHTML='<div style="text-align:center;padding:18px;color:var(--text3);font-size:13px">No categories yet</div>';return;}var h='';for(var i=0;i<cats.length;i++){var cat=cats[i];var cnt=products.filter(function(p){return p.cat===cat;}).length;h+='<div class="cat-manage-item"><div class="cat-manage-left"><span class="cat-manage-emoji">'+(EMOJIS[cat]||'📦')+'</span><span class="cat-manage-name">'+esc(cat)+'</span><span class="cat-manage-count">'+cnt+' items</span></div><button class="cat-del-btn" onclick="deleteCategory(\''+esc(cat)+'\')">🗑️ Delete</button></div>';}el.innerHTML=h;}
