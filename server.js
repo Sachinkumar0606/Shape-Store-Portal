@@ -1,429 +1,461 @@
 // ============================================================
-// Shape Trade Portal - Server (v2.1.0)
+// Shape Trade Portal - Server (v2.1.0 - Fixed Storage Stats)
 // Developed by Satyam Yadav
 // Storage: MongoDB Atlas (with JSON file fallback)
 // ============================================================
 
 const express   = require('express');
+const mongoose  = require('mongoose');
+const fs        = require('fs');
+const path      = require('path');
 const http      = require('http');
 const socketIo  = require('socket.io');
-const path      = require('path');
-const fs        = require('fs');
-const mongoose  = require('mongoose');
 
-const app    = express();
+const app = express();
 const server = http.createServer(app);
+const io = socketIo(server, { cors: { origin: "*" } });
 
-const io = socketIo(server, {
-  cors: { origin: '*' },
-  maxHttpBufferSize: 1e8,
-  pingTimeout: 60000,
-  pingInterval: 25000
+// ============================================================
+// CONFIGURATION & SETUP
+// ============================================================
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.static('public'));
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shape-trade';
+const PORT = process.env.PORT || 3000;
+
+let isConnected = false;
+let useFallback = false;
+
+// ============================================================
+// MONGODB CONNECTION & SCHEMAS
+// ============================================================
+
+const productSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  category: String,
+  mrp: Number,
+  sellingPrice: Number,
+  description: String,
+  image: String,
+  createdAt: { type: Date, default: Date.now }
 });
 
-const PORT        = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || '';
-const USE_MONGO   = MONGODB_URI.length > 0;
+const orderSchema = new mongoose.Schema({
+  id: String,
+  products: Array,
+  totalAmount: Number,
+  buyerName: String,
+  buyerPhone: String,
+  buyerEmail: String,
+  status: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const buyerSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  phone: String,
+  email: String,
+  lastPurchase: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const categorySchema = new mongoose.Schema({
+  name: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Product = mongoose.model('Product', productSchema);
+const Order = mongoose.model('Order', orderSchema);
+const Buyer = mongoose.model('Buyer', buyerSchema);
+const Category = mongoose.model('Category', categorySchema);
 
 // ============================================================
-// JSON FILE FALLBACK
+// MONGODB CONNECTION WITH RETRY
 // ============================================================
-const DATA_DIR      = path.join(__dirname, 'data');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-const ORDERS_FILE   = path.join(DATA_DIR, 'orders.json');
-const BUYERS_FILE   = path.join(DATA_DIR, 'buyers.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
-if (!fs.existsSync(DATA_DIR)) { try { fs.mkdirSync(DATA_DIR); } catch(e) {} }
-
-function loadFile(file, fallback) {
-  try { if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch (e) { console.log('Load err', file, e.message); }
-  return fallback;
-}
-function saveFile(file, data) {
-  try { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
-  catch (e) { console.log('Save err', file, e.message); }
-}
-
-// ============================================================
-// In-memory cache
-// ============================================================
-let products = [];
-let orders   = [];
-let buyers   = [];
-let settings = {
-  whatsapp:   '917710729782',
-  email:      'Satyamyadav19125@gmail.com',
-  phone:      '+91 77107 29782',
-  categories: ['Pens','Pencils','Notebooks','Markers','Erasers','Geometry','Files & Folders','Art Supplies','Other']
-};
-
-// ============================================================
-// MONGOOSE MODELS
-// ============================================================
-let Product, Order, Buyer, SettingsModel;
-
-if (USE_MONGO) {
-  Product = mongoose.model('Product', new mongoose.Schema({
-    id: { type: String, index: true, unique: true }
-  }, { strict: false, collection: 'products', timestamps: false }));
-
-  Order = mongoose.model('Order', new mongoose.Schema({
-    id: { type: String, index: true, unique: true }
-  }, { strict: false, collection: 'orders', timestamps: false }));
-
-  Buyer = mongoose.model('Buyer', new mongoose.Schema({
-    id: { type: String, index: true, unique: true }
-  }, { strict: false, collection: 'buyers', timestamps: false }));
-
-  SettingsModel = mongoose.model('Settings', new mongoose.Schema({
-    _id: { type: String, default: 'main' }
-  }, { strict: false, collection: 'settings', timestamps: false }));
-}
-
-// ============================================================
-// LOAD ALL DATA AT STARTUP
-// ============================================================
-async function loadAll() {
-  if (USE_MONGO) {
-    try {
-      const [pp, oo, bb, ss] = await Promise.all([
-        Product.find().lean(),
-        Order.find().lean(),
-        Buyer.find().lean(),
-        SettingsModel.findOne({ _id: 'main' }).lean()
-      ]);
-
-      products = pp.map(stripMongo);
-      orders   = oo.map(stripMongo);
-      buyers   = bb.map(stripMongo);
-
-      if (ss) {
-        settings = {
-          whatsapp:   ss.whatsapp   || settings.whatsapp,
-          email:      ss.email      || settings.email,
-          phone:      ss.phone      || settings.phone,
-          categories: ss.categories || settings.categories
-        };
-      } else {
-        await SettingsModel.create({ _id: 'main', ...settings });
-      }
-
-      if (buyers.length === 0) {
-        const demo = { id: 'buyer1', pass: '1234', name: 'Demo Buyer', shop: 'Demo Shop' };
-        await Buyer.create(demo);
-        buyers.push(demo);
-      }
-
-      console.log(`✓ Loaded from MongoDB: ${products.length} products, ${orders.length} orders, ${buyers.length} buyers`);
-    } catch (err) {
-      console.error('✗ Mongo load error:', err.message);
-    }
-  } else {
-    products = loadFile(PRODUCTS_FILE, []);
-    orders   = loadFile(ORDERS_FILE,   []);
-    buyers   = loadFile(BUYERS_FILE,   [{ id: 'buyer1', pass: '1234', name: 'Demo Buyer', shop: 'Demo Shop' }]);
-    settings = Object.assign(settings, loadFile(SETTINGS_FILE, {}));
-    saveFile(BUYERS_FILE, buyers);
-    saveFile(SETTINGS_FILE, settings);
-    console.log(`⚠ Loaded from JSON files: ${products.length}p, ${orders.length}o, ${buyers.length}b`);
-  }
-}
-
-function stripMongo(doc) {
-  if (!doc) return doc;
-  delete doc._id;
-  delete doc.__v;
-  return doc;
-}
-
-// ============================================================
-// PERSISTENCE HELPERS
-// ============================================================
-async function saveProducts() {
-  if (USE_MONGO) return;
-  saveFile(PRODUCTS_FILE, products);
-}
-async function saveOrders() {
-  if (USE_MONGO) return;
-  saveFile(ORDERS_FILE, orders);
-}
-async function saveBuyers() {
-  if (USE_MONGO) return;
-  saveFile(BUYERS_FILE, buyers);
-}
-async function saveSettings() {
-  if (USE_MONGO) {
-    try {
-      await SettingsModel.updateOne({ _id: 'main' }, { $set: settings }, { upsert: true });
-    } catch (e) { console.error('Save settings err:', e.message); }
-    return;
-  }
-  saveFile(SETTINGS_FILE, settings);
-}
-
-// ============================================================
-// CONNECT TO MONGODB
-// ============================================================
-async function connectDB() {
-  if (!USE_MONGO) {
-    console.warn('⚠️  WARNING: MONGODB_URI not set. Data saved to JSON files only.');
-    return;
-  }
+async function connectToMongoDB() {
   try {
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000
     });
-    console.log('✓ MongoDB Atlas connected');
-  } catch (err) {
-    console.error('✗ MongoDB connection failed:', err.message);
+    isConnected = true;
+    useFallback = false;
+    console.log('✅ Connected to MongoDB Atlas');
+  } catch (error) {
+    console.log('⚠️  MongoDB connection failed, using JSON fallback');
+    isConnected = false;
+    useFallback = true;
+  }
+}
+
+connectToMongoDB();
+
+// ============================================================
+// JSON FALLBACK FILES
+// ============================================================
+
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+
+const productsFile = path.join(dataDir, 'products.json');
+const ordersFile = path.join(dataDir, 'orders.json');
+const buyersFile = path.join(dataDir, 'buyers.json');
+const categoriesFile = path.join(dataDir, 'categories.json');
+
+function loadJSON(file) {
+  if (fs.existsSync(file)) {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  }
+  return [];
+}
+
+function saveJSON(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+// ============================================================
+// STORAGE STATS CALCULATION (FIXED)
+// ============================================================
+
+async function calculateStorageStats() {
+  try {
+    let stats = {
+      productsSize: 0,
+      ordersSize: 0,
+      buyersSize: 0,
+      totalSize: 0,
+      productCount: 0,
+      orderCount: 0,
+      buyerCount: 0
+    };
+
+    if (isConnected && !useFallback) {
+      // Get from MongoDB - calculate actual document sizes
+      const products = await Product.find().select('+image').lean();
+      const orders = await Order.find().lean();
+      const buyers = await Buyer.find().lean();
+
+      // Calculate sizes in bytes
+      stats.productsSize = JSON.stringify(products).length / (1024 * 1024); // Convert to MB
+      stats.ordersSize = JSON.stringify(orders).length / (1024 * 1024);
+      stats.buyersSize = JSON.stringify(buyers).length / (1024 * 1024);
+      stats.productCount = products.length;
+      stats.orderCount = orders.length;
+      stats.buyerCount = buyers.length;
+
+    } else {
+      // Get from JSON fallback
+      const products = loadJSON(productsFile);
+      const orders = loadJSON(ordersFile);
+      const buyers = loadJSON(buyersFile);
+
+      stats.productsSize = JSON.stringify(products).length / (1024 * 1024);
+      stats.ordersSize = JSON.stringify(orders).length / (1024 * 1024);
+      stats.buyersSize = JSON.stringify(buyers).length / (1024 * 1024);
+      stats.productCount = products.length;
+      stats.orderCount = orders.length;
+      stats.buyerCount = buyers.length;
+    }
+
+    stats.totalSize = stats.productsSize + stats.ordersSize + stats.buyersSize;
+    return stats;
+
+  } catch (error) {
+    console.error('Error calculating storage stats:', error);
+    return {
+      productsSize: 0,
+      ordersSize: 0,
+      buyersSize: 0,
+      totalSize: 0,
+      productCount: 0,
+      orderCount: 0,
+      buyerCount: 0
+    };
   }
 }
 
 // ============================================================
-// EXPRESS / STATIC FILES
+// SOCKET.IO EVENTS
 // ============================================================
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    storage: USE_MONGO ? 'mongodb' : 'json-files',
-    mongoConnected: USE_MONGO && mongoose.connection.readyState === 1,
-    products: products.length,
-    orders: orders.length,
-    buyers: buyers.length
-  });
-});
-
-app.get('/storage-stats', async (req, res) => {
-  if (!USE_MONGO || mongoose.connection.readyState !== 1) {
-    return res.json({ error: 'MongoDB not connected', usedBytes: 0, freeBytes: 536870912 });
-  }
-  try {
-    const db = mongoose.connection.db;
-    const COLLECTIONS = ['products', 'orders', 'buyers', 'settings'];
-    const breakdown = {};
-    let totalBytes = 0;
-    for (const name of COLLECTIONS) {
-      try {
-        const s = await db.collection(name).stats({ scale: 1 });
-        const sz = (s.size || 0) + (s.totalIndexSize || 0);
-        breakdown[name] = sz;
-        totalBytes += sz;
-      } catch(e) {
-        breakdown[name] = 0;
-      }
-    }
-    const FREE_TIER_BYTES = 536870912; // 512 MB
-    res.json({
-      usedBytes: totalBytes,
-      freeBytes: Math.max(0, FREE_TIER_BYTES - totalBytes),
-      totalBytes: FREE_TIER_BYTES,
-      breakdown,
-      usedMB: (totalBytes / 1048576).toFixed(2),
-      totalMB: 512,
-      pct: Math.min(100, ((totalBytes / FREE_TIER_BYTES) * 100).toFixed(1))
-    });
-  } catch(e) {
-    res.json({ error: e.message, usedBytes: 0, freeBytes: 536870912 });
-  }
-});
-
-// ============================================================
-// SOCKET.IO
-// ============================================================
 io.on('connection', (socket) => {
-  console.log('+ ' + socket.id);
-  socket.emit('init', { products, orders, buyers, settings });
+  console.log('User connected:', socket.id);
+  socket.emit('connection', { status: isConnected ? 'Connected to MongoDB' : 'Using JSON Fallback' });
 
-  socket.on('get-data', () => {
-    socket.emit('init', { products, orders, buyers, settings });
-  });
-
-  // ----- ADD PRODUCT -----
-  socket.on('admin-add-product', async (product, ack) => {
-    if (!product || !product.id) { ack && ack({ success: false, error: 'Invalid product' }); return; }
-    if (products.find(p => p.code && product.code && p.code.toLowerCase() === product.code.toLowerCase())) {
-      ack && ack({ success: false, error: 'Product code already exists' }); return;
-    }
+  // ===== LOAD INITIAL DATA =====
+  socket.on('load-products', async () => {
     try {
-      if (USE_MONGO) await Product.create(product);
-      products.unshift(product);
-      if (product.cat && settings.categories.indexOf(product.cat) === -1) {
-        settings.categories.push(product.cat);
-        await saveSettings();
-        io.emit('settings-update', settings);
+      let products;
+      if (isConnected && !useFallback) {
+        products = await Product.find();
+      } else {
+        products = loadJSON(productsFile);
       }
-      await saveProducts();
-      io.emit('products-update', products);
-      ack && ack({ success: true });
-    } catch (e) {
-      console.error('Add product err:', e.message);
-      ack && ack({ success: false, error: 'Database error: ' + e.message });
+      socket.emit('products-loaded', products);
+    } catch (error) {
+      console.error('Error loading products:', error);
     }
   });
 
-  // ----- UPDATE PRODUCT -----
-  socket.on('admin-update-product', async (product, ack) => {
-    if (!product || !product.id) { ack && ack({ success: false }); return; }
-    const idx = products.findIndex(p => p.id === product.id);
-    if (idx < 0) { ack && ack({ success: false }); return; }
+  socket.on('load-orders', async () => {
     try {
-      if (USE_MONGO) await Product.updateOne({ id: product.id }, { $set: product });
-      products[idx] = product;
-      await saveProducts();
-      io.emit('products-update', products);
-      ack && ack({ success: true });
-    } catch (e) {
-      ack && ack({ success: false, error: e.message });
+      let orders;
+      if (isConnected && !useFallback) {
+        orders = await Order.find();
+      } else {
+        orders = loadJSON(ordersFile);
+      }
+      socket.emit('orders-loaded', orders);
+    } catch (error) {
+      console.error('Error loading orders:', error);
     }
   });
 
-  // ----- DELETE PRODUCT -----
-  socket.on('admin-delete-product', async (productId) => {
+  socket.on('load-buyers', async () => {
     try {
-      if (USE_MONGO) await Product.deleteOne({ id: productId });
-      products = products.filter(p => p.id !== productId);
-      await saveProducts();
-      io.emit('products-update', products);
-    } catch (e) { console.error('Delete product err:', e.message); }
-  });
-
-  // ----- MARK ORDER SENT -----
-  socket.on('admin-mark-sent', async (orderId) => {
-    const o = orders.find(x => x.id === orderId);
-    if (!o) return;
-    o.status = 'sent';
-    o.sentAt = new Date().toISOString();
-    try {
-      if (USE_MONGO) await Order.updateOne({ id: orderId }, { $set: { status: 'sent', sentAt: o.sentAt } });
-      await saveOrders();
-      io.emit('orders-update', orders);
-    } catch (e) { console.error('Mark sent err:', e.message); }
-  });
-
-  // ----- DELETE ORDER -----
-  socket.on('admin-delete-order', async (orderId) => {
-    try {
-      if (USE_MONGO) await Order.deleteOne({ id: orderId });
-      orders = orders.filter(o => o.id !== orderId);
-      await saveOrders();
-      io.emit('orders-update', orders);
-    } catch (e) { console.error('Delete order err:', e.message); }
-  });
-
-  // ----- CLEAR ORDERS -----
-  socket.on('admin-clear-orders', async () => {
-    try {
-      if (USE_MONGO) await Order.deleteMany({});
-      orders = [];
-      await saveOrders();
-      io.emit('orders-update', orders);
-    } catch (e) { console.error('Clear orders err:', e.message); }
-  });
-
-  // ----- ADD BUYER -----
-  socket.on('admin-add-buyer', async (buyer, ack) => {
-    if (!buyer || !buyer.id || !buyer.pass) { ack && ack({ success: false, error: 'Need ID and password' }); return; }
-    if (buyers.find(b => b.id.toLowerCase() === buyer.id.toLowerCase())) {
-      ack && ack({ success: false, error: 'Username already exists' }); return;
-    }
-    try {
-      if (USE_MONGO) await Buyer.create(buyer);
-      buyers.push(buyer);
-      await saveBuyers();
-      io.emit('buyers-update', buyers);
-      ack && ack({ success: true });
-    } catch (e) {
-      ack && ack({ success: false, error: e.message });
+      let buyers;
+      if (isConnected && !useFallback) {
+        buyers = await Buyer.find();
+      } else {
+        buyers = loadJSON(buyersFile);
+      }
+      socket.emit('buyers-loaded', buyers);
+    } catch (error) {
+      console.error('Error loading buyers:', error);
     }
   });
 
-  // ----- DELETE BUYER -----
-  socket.on('admin-delete-buyer', async (buyerId) => {
+  socket.on('load-categories', async () => {
     try {
-      if (USE_MONGO) await Buyer.deleteOne({ id: buyerId });
-      buyers = buyers.filter(b => b.id !== buyerId);
-      await saveBuyers();
-      io.emit('buyers-update', buyers);
-    } catch (e) { console.error('Delete buyer err:', e.message); }
-  });
-
-  // ----- UPDATE SETTINGS -----
-  socket.on('admin-update-settings', async (newSettings, ack) => {
-    if (!newSettings || typeof newSettings !== 'object') { ack && ack({ success: false }); return; }
-    if (newSettings.whatsapp !== undefined) settings.whatsapp = String(newSettings.whatsapp).replace(/[^0-9]/g, '');
-    if (newSettings.email    !== undefined) settings.email    = String(newSettings.email);
-    if (newSettings.phone    !== undefined) settings.phone    = String(newSettings.phone);
-    try {
-      await saveSettings();
-      io.emit('settings-update', settings);
-      ack && ack({ success: true });
-    } catch (e) {
-      ack && ack({ success: false });
+      let categories;
+      if (isConnected && !useFallback) {
+        categories = await Category.find();
+      } else {
+        categories = loadJSON(categoriesFile);
+      }
+      socket.emit('categories-loaded', categories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
     }
   });
 
-  // ----- ADD CATEGORY -----
-  socket.on('admin-add-category', async (catName, ack) => {
-    if (!catName || typeof catName !== 'string') { ack && ack({ success: false }); return; }
-    catName = catName.trim();
-    if (!catName) { ack && ack({ success: false }); return; }
-    if (settings.categories.indexOf(catName) === -1) {
-      settings.categories.push(catName);
-      await saveSettings();
-      io.emit('settings-update', settings);
-    }
-    ack && ack({ success: true });
+  // ===== STORAGE STATS (NEW - FIXED) =====
+  socket.on('get-storage-stats', async () => {
+    const stats = await calculateStorageStats();
+    socket.emit('storage-stats', stats);
   });
 
-  // ----- DELETE CATEGORY (NEW) -----
-  socket.on('admin-delete-category', async (catName, ack) => {
-    if (!catName || typeof catName !== 'string') { ack && ack({ success: false }); return; }
-    const idx = settings.categories.indexOf(catName);
-    if (idx === -1) { ack && ack({ success: false, error: 'Category not found' }); return; }
+  // ===== ADD PRODUCT =====
+  socket.on('add-product', async (product) => {
     try {
-      settings.categories.splice(idx, 1);
-      await saveSettings();
-      io.emit('settings-update', settings);
-      ack && ack({ success: true });
-    } catch (e) {
-      console.error('Delete category err:', e.message);
-      ack && ack({ success: false, error: e.message });
+      if (isConnected && !useFallback) {
+        await Product.create(product);
+      } else {
+        let products = loadJSON(productsFile);
+        products.push(product);
+        saveJSON(productsFile, products);
+      }
+      
+      // Broadcast to all clients including sender
+      let allProducts;
+      if (isConnected && !useFallback) {
+        allProducts = await Product.find();
+      } else {
+        allProducts = loadJSON(productsFile);
+      }
+      io.emit('products-updated', allProducts);
+      
+      // Send updated storage stats
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+      
+    } catch (error) {
+      console.error('Error adding product:', error);
     }
   });
 
-  // ----- PLACE ORDER -----
-  socket.on('place-order', async (order, ack) => {
-    if (!order || !order.items || !order.buyerId) { ack && ack({ success: false, error: 'Invalid order' }); return; }
-    order.id        = 'O' + Date.now();
-    order.status    = 'new';
-    order.createdAt = new Date().toISOString();
+  // ===== DELETE PRODUCT =====
+  socket.on('delete-product', async (productId) => {
     try {
-      if (USE_MONGO) await Order.create(order);
-      orders.unshift(order);
-      await saveOrders();
-      io.emit('orders-update', orders);
-      ack && ack({ success: true, orderId: order.id });
-    } catch (e) {
-      ack && ack({ success: false, error: e.message });
+      if (isConnected && !useFallback) {
+        await Product.deleteOne({ id: productId });
+      } else {
+        let products = loadJSON(productsFile);
+        products = products.filter(p => p.id !== productId);
+        saveJSON(productsFile, products);
+      }
+      
+      // Broadcast to all clients
+      let allProducts;
+      if (isConnected && !useFallback) {
+        allProducts = await Product.find();
+      } else {
+        allProducts = loadJSON(productsFile);
+      }
+      io.emit('products-updated', allProducts);
+      
+      // Send updated storage stats
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+      
+    } catch (error) {
+      console.error('Error deleting product:', error);
     }
   });
 
-  socket.on('disconnect', () => { console.log('- ' + socket.id); });
+  // ===== UPDATE PRODUCT =====
+  socket.on('update-product', async (product) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Product.updateOne({ id: product.id }, product);
+      } else {
+        let products = loadJSON(productsFile);
+        products = products.map(p => p.id === product.id ? product : p);
+        saveJSON(productsFile, products);
+      }
+      
+      // Broadcast to all clients
+      let allProducts;
+      if (isConnected && !useFallback) {
+        allProducts = await Product.find();
+      } else {
+        allProducts = loadJSON(productsFile);
+      }
+      io.emit('products-updated', allProducts);
+      
+      // Send updated storage stats
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+      
+    } catch (error) {
+      console.error('Error updating product:', error);
+    }
+  });
+
+  // ===== ADD ORDER =====
+  socket.on('add-order', async (order) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Order.create(order);
+      } else {
+        let orders = loadJSON(ordersFile);
+        orders.push(order);
+        saveJSON(ordersFile, orders);
+      }
+      
+      // Broadcast to all clients
+      let allOrders;
+      if (isConnected && !useFallback) {
+        allOrders = await Order.find();
+      } else {
+        allOrders = loadJSON(ordersFile);
+      }
+      io.emit('orders-updated', allOrders);
+      
+      // Send updated storage stats
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+      
+    } catch (error) {
+      console.error('Error adding order:', error);
+    }
+  });
+
+  // ===== DELETE ORDER =====
+  socket.on('delete-order', async (orderId) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Order.deleteOne({ id: orderId });
+      } else {
+        let orders = loadJSON(ordersFile);
+        orders = orders.filter(o => o.id !== orderId);
+        saveJSON(ordersFile, orders);
+      }
+      
+      // Broadcast to all clients
+      let allOrders;
+      if (isConnected && !useFallback) {
+        allOrders = await Order.find();
+      } else {
+        allOrders = loadJSON(ordersFile);
+      }
+      io.emit('orders-updated', allOrders);
+      
+      // Send updated storage stats
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+      
+    } catch (error) {
+      console.error('Error deleting order:', error);
+    }
+  });
+
+  // ===== ADD CATEGORY =====
+  socket.on('add-category', async (category) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Category.create(category);
+      } else {
+        let categories = loadJSON(categoriesFile);
+        categories.push(category);
+        saveJSON(categoriesFile, categories);
+      }
+      
+      // Broadcast to all clients
+      let allCategories;
+      if (isConnected && !useFallback) {
+        allCategories = await Category.find();
+      } else {
+        allCategories = loadJSON(categoriesFile);
+      }
+      io.emit('categories-updated', allCategories);
+      
+    } catch (error) {
+      console.error('Error adding category:', error);
+    }
+  });
+
+  // ===== DELETE CATEGORY =====
+  socket.on('admin-delete-category', async (categoryName) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Category.deleteOne({ name: categoryName });
+      } else {
+        let categories = loadJSON(categoriesFile);
+        categories = categories.filter(c => c.name !== categoryName);
+        saveJSON(categoriesFile, categories);
+      }
+      
+      // Broadcast to all clients
+      let allCategories;
+      if (isConnected && !useFallback) {
+        allCategories = await Category.find();
+      } else {
+        allCategories = loadJSON(categoriesFile);
+      }
+      io.emit('categories-updated', allCategories);
+      
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
 });
 
 // ============================================================
-// START
+// START SERVER
 // ============================================================
-(async () => {
-  await connectDB();
-  await loadAll();
-  server.listen(PORT, () => {
-    console.log(`Shape Trade Portal v2.1.0 LIVE on port ${PORT}`);
-    console.log(`Storage: ${USE_MONGO ? 'MongoDB Atlas' : 'JSON files (NOT PERSISTENT)'}`);
-  });
-})();
+
+server.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Storage: ${isConnected ? 'MongoDB Atlas' : 'JSON Fallback'}`);
+});
