@@ -82,9 +82,11 @@ html,body{font-family:'Manrope',sans-serif;font-size:14px;background:var(--bg);c
 .topbar-title{font-size:15px;font-weight:800;font-family:'DM Serif Display',serif;line-height:1.1;color:#fff}
 .topbar-sub{font-size:9px;color:rgba(255,255,255,0.5);font-weight:500}
 .topbar-r{display:flex;align-items:center;gap:5px}
-.live-pill{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.2);padding:5px 9px;border-radius:7px;font-size:10px;font-weight:700;color:var(--green);border:1px solid rgba(16,185,129,0.3)}
-.live-pill.off{background:rgba(239,68,68,0.2);color:var(--red);border-color:rgba(239,68,68,0.3)}
-.live-dot{width:6px;height:6px;background:currentColor;border-radius:50%;animation:pulse 1.8s infinite}
+/* Just a dot indicator - no text, no pill background */
+.live-pill{display:flex;align-items:center;justify-content:center;width:20px;height:20px;background:none;border:none;padding:0}
+.live-pill.off .live-dot{background:var(--red);animation:none}
+.live-dot{width:9px;height:9px;background:var(--green);border-radius:50%;animation:pulse 1.8s infinite;box-shadow:0 0 6px var(--green)}
+.live-pill.off .live-dot{box-shadow:0 0 6px var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 /* FIX 3: Properly visible topbar buttons */
 .icon-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:4px;transition:all 0.15s;position:relative;white-space:nowrap}
@@ -386,9 +388,9 @@ html,body{font-family:'Manrope',sans-serif;font-size:14px;background:var(--bg);c
   <div class="topbar">
     <div class="topbar-l"><div class="topbar-mark"><span>S</span></div><div><div class="topbar-title">Shape Admin</div><div class="topbar-sub">Distributor Dashboard</div></div></div>
     <div class="topbar-r">
-      <div class="live-pill" id="conn-1"><span class="live-dot"></span><span>Live</span></div>
+      <div class="live-pill" id="conn-1"><span class="live-dot"></span></div>
       <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" id="theme-btn">🌙</button>
-      <button class="icon-btn" onclick="location.reload()" title="Refresh">🔄</button>
+      <button class="icon-btn" onclick="refreshData()" title="Refresh">🔄</button>
       <button class="icon-btn" onclick="doLogout()">Sign out</button>
     </div>
   </div>
@@ -460,13 +462,13 @@ html,body{font-family:'Manrope',sans-serif;font-size:14px;background:var(--bg);c
     <div class="topbar-l"><div class="topbar-mark"><span>S</span></div><div><div class="topbar-title">Shape Store</div><div class="topbar-sub" id="buyer-sub">Welcome</div></div></div>
     <!-- FIX 3: Properly labeled visible topbar buttons -->
     <div class="topbar-r">
-      <div class="live-pill" id="conn-2"><span class="live-dot"></span><span>Live</span></div>
+      <div class="live-pill" id="conn-2"><span class="live-dot"></span></div>
       <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn-buyer">🌙</button>
-      <button class="icon-btn" onclick="location.reload()" title="Refresh">🔄</button>
-      <button class="icon-btn" onclick="showContact()">📞 Contact</button>
-      <button class="icon-btn" onclick="showHistory()">📜 History</button>
-      <button class="icon-btn primary" onclick="showCart()">🛒 Cart <span class="cart-badge" id="cart-badge" style="display:none">0</span></button>
-      <button class="icon-btn" onclick="doLogout()">Exit</button>
+      <button class="icon-btn" onclick="refreshData()" title="Refresh">🔄</button>
+      <button class="icon-btn" onclick="showContact()" title="Contact">📞</button>
+      <button class="icon-btn" onclick="showHistory()" title="History">📜</button>
+      <button class="icon-btn primary" onclick="showCart()" title="Cart">🛒<span class="cart-badge" id="cart-badge" style="display:none">0</span></button>
+      <button class="icon-btn" onclick="doLogout()" title="Exit">🚪</button>
     </div>
   </div>
   <div class="welcome-bar">👋 Welcome back, <b id="buyer-name">Buyer</b></div>
@@ -633,7 +635,14 @@ socket.on('orders-update',function(d){orders=d||[];redraw();});
 socket.on('buyers-update',function(d){buyers=d||[];redraw();});
 socket.on('settings-update',function(d){if(d)settings=Object.assign(settings,d);refreshCategories();redraw();});
 
-function setConn(ok){['conn-1','conn-2'].forEach(function(id){var el=document.getElementById(id);if(!el)return;if(ok){el.classList.remove('off');el.querySelector('span:last-child').textContent='Live';}else{el.classList.add('off');el.querySelector('span:last-child').textContent='Off';}});}
+function setConn(ok){['conn-1','conn-2'].forEach(function(id){var el=document.getElementById(id);if(!el)return;if(ok)el.classList.remove('off');else el.classList.add('off');});}
+
+/* Refresh data WITHOUT logging out */
+function refreshData(){
+  toast('🔄 Refreshing...','');
+  socket.emit('get-data');
+  setTimeout(function(){redraw();},400);
+}
 function redraw(){if(document.getElementById('p-admin').classList.contains('on'))renderAdmin();if(document.getElementById('p-buyer').classList.contains('on'))renderStore();}
 function refreshCategories(){var sel=document.getElementById('np-cat');if(!sel)return;var cur=sel.value;var cats=settings.categories||[];var h='';for(var i=0;i<cats.length;i++)h+='<option value="'+esc(cats[i])+'">'+esc(cats[i])+'</option>';h+='<option value="__new__">➕ Add new category...</option>';sel.innerHTML=h;if(cur&&cats.indexOf(cur)!==-1)sel.value=cur;}
 function onCatChange(){var sel=document.getElementById('np-cat');var inp=document.getElementById('np-newcat');if(sel.value==='__new__'){inp.style.display='block';inp.focus();}else{inp.style.display='none';inp.value='';}}
