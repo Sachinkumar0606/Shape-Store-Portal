@@ -289,7 +289,34 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ===== DELETE PRODUCT =====
+  // ===== UPDATE PRODUCT =====
+  socket.on('admin-update-product', async (product, callback) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Product.updateOne({ id: product.id }, product);
+      } else {
+        let products = loadJSON(productsFile);
+        products = products.map(p => p.id === product.id ? product : p);
+        saveJSON(productsFile, products);
+      }
+
+      let allProducts;
+      if (isConnected && !useFallback) {
+        allProducts = await Product.find();
+      } else {
+        allProducts = loadJSON(productsFile);
+      }
+      io.emit('products-updated', allProducts);
+
+      const stats = await calculateStorageStats();
+      io.emit('storage-stats', stats);
+
+      if (callback) callback({ success: true });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      if (callback) callback({ success: false, error: error.message });
+    }
+  });
   socket.on('admin-delete-product', async (productId, callback) => {
     try {
       if (isConnected && !useFallback) {
@@ -432,6 +459,32 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== UPDATE BUYER =====
+  socket.on('admin-update-buyer', async (buyer, callback) => {
+    try {
+      if (isConnected && !useFallback) {
+        await Buyer.updateOne({ id: buyer.id }, buyer);
+      } else {
+        let buyers = loadJSON(buyersFile);
+        buyers = buyers.map(b => b.id === buyer.id ? buyer : b);
+        saveJSON(buyersFile, buyers);
+      }
+
+      let allBuyers;
+      if (isConnected && !useFallback) {
+        allBuyers = await Buyer.find();
+      } else {
+        allBuyers = loadJSON(buyersFile);
+      }
+      io.emit('buyers-updated', allBuyers);
+
+      if (callback) callback({ success: true });
+    } catch (error) {
+      console.error('Error updating buyer:', error);
+      if (callback) callback({ success: false, error: error.message });
+    }
+  });
+
   // ===== DELETE BUYER =====
   socket.on('admin-delete-buyer', async (buyerId, callback) => {
     try {
@@ -495,6 +548,48 @@ io.on('connection', (socket) => {
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error adding category:', error);
+      if (callback) callback({ success: false, error: error.message });
+    }
+  });
+
+  // ===== UPDATE CATEGORY =====
+  socket.on('admin-update-category', async (data, callback) => {
+    try {
+      const { oldName, newName } = data;
+      
+      if (isConnected && !useFallback) {
+        // Update category name in Categories collection
+        await Category.updateOne({ name: oldName }, { name: newName });
+        
+        // Update all products that have this category
+        await Product.updateMany({ cat: oldName }, { cat: newName });
+      } else {
+        // Update in JSON files
+        let categories = loadJSON(categoriesFile);
+        categories = categories.map(c => c.name === oldName ? { ...c, name: newName } : c);
+        saveJSON(categoriesFile, categories);
+        
+        let products = loadJSON(productsFile);
+        products = products.map(p => p.cat === oldName ? { ...p, cat: newName } : p);
+        saveJSON(productsFile, products);
+      }
+
+      // Emit updates
+      let allCategories;
+      let allProducts;
+      if (isConnected && !useFallback) {
+        allCategories = await Category.find();
+        allProducts = await Product.find();
+      } else {
+        allCategories = loadJSON(categoriesFile);
+        allProducts = loadJSON(productsFile);
+      }
+      io.emit('categories-updated', allCategories);
+      io.emit('products-updated', allProducts);
+
+      if (callback) callback({ success: true });
+    } catch (error) {
+      console.error('Error updating category:', error);
       if (callback) callback({ success: false, error: error.message });
     }
   });
