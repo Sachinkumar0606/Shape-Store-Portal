@@ -556,36 +556,45 @@ io.on('connection', (socket) => {
   socket.on('admin-update-category', async (data, callback) => {
     try {
       const { oldName, newName } = data;
+      console.log(`Updating category: ${oldName} -> ${newName}`);
       
       if (isConnected && !useFallback) {
-        // Update category name in Categories collection
-        await Category.updateOne({ name: oldName }, { name: newName });
-        
         // Update all products that have this category
         await Product.updateMany({ cat: oldName }, { cat: newName });
+        
+        // Update settings categories array
+        let settings = await Settings.findOne();
+        if (settings && settings.categories) {
+          settings.categories = settings.categories.map(c => c === oldName ? newName : c);
+          await settings.save();
+        }
       } else {
         // Update in JSON files
-        let categories = loadJSON(categoriesFile);
-        categories = categories.map(c => c.name === oldName ? { ...c, name: newName } : c);
-        saveJSON(categoriesFile, categories);
-        
         let products = loadJSON(productsFile);
         products = products.map(p => p.cat === oldName ? { ...p, cat: newName } : p);
         saveJSON(productsFile, products);
+        
+        let settings = loadJSON(settingsFile);
+        if (settings && settings.categories) {
+          settings.categories = settings.categories.map(c => c === oldName ? newName : c);
+          saveJSON(settingsFile, settings);
+        }
       }
 
-      // Emit updates
-      let allCategories;
+      // Get and emit updated data
       let allProducts;
+      let allSettings;
       if (isConnected && !useFallback) {
-        allCategories = await Category.find();
         allProducts = await Product.find();
+        allSettings = await Settings.findOne();
       } else {
-        allCategories = loadJSON(categoriesFile);
         allProducts = loadJSON(productsFile);
+        allSettings = loadJSON(settingsFile);
       }
-      io.emit('categories-updated', allCategories);
+      
       io.emit('products-updated', allProducts);
+      io.emit('settings-updated', allSettings);
+      console.log(`Category updated successfully: ${oldName} -> ${newName}`);
 
       if (callback) callback({ success: true });
     } catch (error) {
