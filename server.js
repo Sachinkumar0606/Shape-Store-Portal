@@ -157,7 +157,6 @@ async function calculateStorageStats() {
     };
 
     if (isConnected && !useFallback) {
-      // Get from MongoDB
       const products = await Product.find().lean();
       const orders = await Order.find().lean();
       const buyers = await Buyer.find().lean();
@@ -170,7 +169,6 @@ async function calculateStorageStats() {
       stats.buyerCount = buyers.length;
 
     } else {
-      // Get from JSON fallback
       const products = loadJSON(productsFile);
       const orders = loadJSON(ordersFile);
       const buyers = loadJSON(buyersFile);
@@ -236,7 +234,6 @@ io.on('connection', (socket) => {
         settings: settings || { whatsapp: '', email: '', phone: '', categories: [] }
       });
 
-      // Also send storage stats immediately
       const stats = await calculateStorageStats();
       socket.emit('storage-stats', stats);
 
@@ -269,7 +266,6 @@ io.on('connection', (socket) => {
         saveJSON(productsFile, products);
       }
 
-      // Broadcast updated products to ALL clients
       let allProducts;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -278,7 +274,6 @@ io.on('connection', (socket) => {
       }
       io.emit('products-updated', allProducts);
 
-      // Send updated storage stats
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
 
@@ -317,6 +312,8 @@ io.on('connection', (socket) => {
       if (callback) callback({ success: false, error: error.message });
     }
   });
+
+  // ===== DELETE PRODUCT =====
   socket.on('admin-delete-product', async (productId, callback) => {
     try {
       if (isConnected && !useFallback) {
@@ -534,7 +531,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ===== ADD CATEGORY =====
+  // ===== ADD CATEGORY (FIXED) =====
   socket.on('add-category', async (category, callback) => {
     try {
       if (isConnected && !useFallback) {
@@ -544,6 +541,15 @@ io.on('connection', (socket) => {
         categories.push(category);
         saveJSON(categoriesFile, categories);
       }
+
+      // Broadcast updated categories to ALL clients
+      let allCategories;
+      if (isConnected && !useFallback) {
+        allCategories = await Category.find();
+      } else {
+        allCategories = loadJSON(categoriesFile);
+      }
+      io.emit('categories-updated', allCategories);
 
       if (callback) callback({ success: true });
     } catch (error) {
@@ -559,13 +565,9 @@ io.on('connection', (socket) => {
       console.log('Renaming category:', oldName, '->', newName);
       
       if (isConnected && !useFallback) {
-        // 1. Update Category collection
         await Category.updateMany({ name: oldName }, { name: newName });
-        
-        // 2. Update all products with old category
         await Product.updateMany({ cat: oldName }, { cat: newName });
         
-        // 3. Update settings.categories using raw driver (avoids _id validation)
         const existingSettings = await Settings.findOne();
         if (existingSettings && existingSettings.categories) {
           const newCats = existingSettings.categories.map(c => c === oldName ? newName : c);
@@ -593,7 +595,6 @@ io.on('connection', (socket) => {
         }
       }
 
-      // 4. Broadcast ALL fresh data to ALL connected clients
       let allProducts, allOrders, allBuyers, allCategories, allSettings;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -610,7 +611,6 @@ io.on('connection', (socket) => {
         allSettings = (loadJSON(settingsFile) || [{}])[0] || null;
       }
       
-      // Broadcast fresh init to ALL clients so everything refreshes
       io.emit('init', {
         products: allProducts || [],
         orders: allOrders || [],
@@ -627,6 +627,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ===== DELETE CATEGORY =====
   socket.on('admin-delete-category', async (categoryName, callback) => {
     try {
       if (isConnected && !useFallback) {
