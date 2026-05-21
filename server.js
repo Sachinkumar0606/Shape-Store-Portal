@@ -13,7 +13,7 @@ const socketIo  = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } });
+const io = socketIo(server, { cors: { origin: "*" }, maxHttpBufferSize: 50e6 });
 
 // ============================================================
 // CONFIGURATION & SETUP
