@@ -1,5 +1,5 @@
 // ============================================================
-// Shape Trade Portal - Server (v2.1.0 - FIXED Data Persistence)
+// Shape Trade Portal - Server (v2.2.0 - Fixed + Sleep Mode)
 // Developed by Satyam Yadav
 // Storage: MongoDB Atlas (with JSON file fallback)
 // ============================================================
@@ -20,6 +20,60 @@ const io = socketIo(server, { cors: { origin: "*" } });
 // ============================================================
 
 app.use(express.json({ limit: '50mb' }));
+
+// ============================================================
+// SLEEP MODE - 12:00 AM to 5:00 AM IST (Punjab Time)
+// Saves Render free tier hours
+// ============================================================
+
+const SLEEP_START = 0;  // 12:00 AM IST
+const SLEEP_END   = 5;  // 5:00 AM IST
+
+function getISTHour() {
+  const now = new Date();
+  // IST = UTC + 5:30
+  const istMs = now.getTime() + (5.5 * 60 * 60 * 1000);
+  const ist = new Date(istMs);
+  return ist.getUTCHours();
+}
+
+function isSleepTime() {
+  const hour = getISTHour();
+  return hour >= SLEEP_START && hour < SLEEP_END;
+}
+
+// Sleep middleware - returns a sleep page during off hours
+app.use((req, res, next) => {
+  if (isSleepTime() && req.path !== '/health') {
+    // Allow socket.io connections through
+    if (req.path.startsWith('/socket.io')) return next();
+    
+    return res.send(`
+      <!DOCTYPE html>
+      <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>Shape Trade - Sleeping</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#0a0e27;color:#fff;font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px}
+        .box{max-width:400px}
+        .moon{font-size:80px;margin-bottom:20px}
+        h1{font-size:24px;margin-bottom:10px;color:#ff6b35}
+        p{color:rgba(255,255,255,0.6);font-size:14px;line-height:1.6;margin-bottom:8px}
+        .time{background:rgba(255,255,255,0.1);padding:10px 20px;border-radius:10px;display:inline-block;margin-top:15px;font-size:13px;color:rgba(255,255,255,0.5)}
+      </style>
+      <script>setTimeout(()=>location.reload(),60000)</script>
+      </head><body><div class="box">
+        <div class="moon">🌙</div>
+        <h1>Shape Trade is Sleeping</h1>
+        <p>The portal is resting from <b>12:00 AM</b> to <b>5:00 AM</b> IST to save resources.</p>
+        <p>It will wake up automatically at 5:00 AM.</p>
+        <div class="time">⏰ This page auto-refreshes every minute</div>
+      </div></body></html>
+    `);
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shape-trade';
@@ -90,11 +144,7 @@ const Settings = mongoose.model('Settings', settingsSchema);
 
 async function connectToMongoDB() {
   try {
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000
-    });
+    await mongoose.connect(MONGODB_URI);
     isConnected = true;
     useFallback = false;
     console.log('✅ Connected to MongoDB Atlas');
@@ -147,32 +197,24 @@ function saveJSON(file, data) {
 async function calculateStorageStats() {
   try {
     let stats = {
-      productsSize: 0,
-      ordersSize: 0,
-      buyersSize: 0,
-      totalSize: 0,
-      productCount: 0,
-      orderCount: 0,
-      buyerCount: 0
+      productsSize: 0, ordersSize: 0, buyersSize: 0,
+      totalSize: 0, productCount: 0, orderCount: 0, buyerCount: 0
     };
 
     if (isConnected && !useFallback) {
       const products = await Product.find().lean();
       const orders = await Order.find().lean();
       const buyers = await Buyer.find().lean();
-
       stats.productsSize = JSON.stringify(products).length / (1024 * 1024);
       stats.ordersSize = JSON.stringify(orders).length / (1024 * 1024);
       stats.buyersSize = JSON.stringify(buyers).length / (1024 * 1024);
       stats.productCount = products.length;
       stats.orderCount = orders.length;
       stats.buyerCount = buyers.length;
-
     } else {
       const products = loadJSON(productsFile);
       const orders = loadJSON(ordersFile);
       const buyers = loadJSON(buyersFile);
-
       stats.productsSize = JSON.stringify(products).length / (1024 * 1024);
       stats.ordersSize = JSON.stringify(orders).length / (1024 * 1024);
       stats.buyersSize = JSON.stringify(buyers).length / (1024 * 1024);
@@ -183,18 +225,9 @@ async function calculateStorageStats() {
 
     stats.totalSize = stats.productsSize + stats.ordersSize + stats.buyersSize;
     return stats;
-
   } catch (error) {
     console.error('Error calculating storage stats:', error);
-    return {
-      productsSize: 0,
-      ordersSize: 0,
-      buyersSize: 0,
-      totalSize: 0,
-      productCount: 0,
-      orderCount: 0,
-      buyerCount: 0
-    };
+    return { productsSize:0, ordersSize:0, buyersSize:0, totalSize:0, productCount:0, orderCount:0, buyerCount:0 };
   }
 }
 
@@ -210,7 +243,6 @@ io.on('connection', (socket) => {
   socket.on('get-data', async () => {
     try {
       let products, orders, buyers, categories, settings;
-
       if (isConnected && !useFallback) {
         products = await Product.find();
         orders = await Order.find();
@@ -225,27 +257,16 @@ io.on('connection', (socket) => {
         categories = loadJSON(categoriesFile);
         settings = loadJSON(settingsFile)[0] || null;
       }
-
       socket.emit('init', {
-        products: products || [],
-        orders: orders || [],
-        buyers: buyers || [],
-        categories: categories || [],
+        products: products || [], orders: orders || [],
+        buyers: buyers || [], categories: categories || [],
         settings: settings || { whatsapp: '', email: '', phone: '', categories: [] }
       });
-
       const stats = await calculateStorageStats();
       socket.emit('storage-stats', stats);
-
     } catch (error) {
       console.error('Error loading data:', error);
-      socket.emit('init', {
-        products: [],
-        orders: [],
-        buyers: [],
-        categories: [],
-        settings: { whatsapp: '', email: '', phone: '', categories: [] }
-      });
+      socket.emit('init', { products:[], orders:[], buyers:[], categories:[], settings:{ whatsapp:'', email:'', phone:'', categories:[] } });
     }
   });
 
@@ -265,7 +286,6 @@ io.on('connection', (socket) => {
         products.push(product);
         saveJSON(productsFile, products);
       }
-
       let allProducts;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -273,10 +293,8 @@ io.on('connection', (socket) => {
         allProducts = loadJSON(productsFile);
       }
       io.emit('products-updated', allProducts);
-
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error adding product:', error);
@@ -294,7 +312,6 @@ io.on('connection', (socket) => {
         products = products.map(p => p.id === product.id ? product : p);
         saveJSON(productsFile, products);
       }
-
       let allProducts;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -302,10 +319,8 @@ io.on('connection', (socket) => {
         allProducts = loadJSON(productsFile);
       }
       io.emit('products-updated', allProducts);
-
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error updating product:', error);
@@ -323,7 +338,6 @@ io.on('connection', (socket) => {
         products = products.filter(p => p.id !== productId);
         saveJSON(productsFile, products);
       }
-
       let allProducts;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -331,10 +345,8 @@ io.on('connection', (socket) => {
         allProducts = loadJSON(productsFile);
       }
       io.emit('products-updated', allProducts);
-
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -348,7 +360,6 @@ io.on('connection', (socket) => {
       const orderId = 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
       order.id = orderId;
       order.createdAt = new Date();
-
       if (isConnected && !useFallback) {
         await Order.create(order);
       } else {
@@ -356,7 +367,6 @@ io.on('connection', (socket) => {
         orders.push(order);
         saveJSON(ordersFile, orders);
       }
-
       let allOrders;
       if (isConnected && !useFallback) {
         allOrders = await Order.find();
@@ -364,10 +374,8 @@ io.on('connection', (socket) => {
         allOrders = loadJSON(ordersFile);
       }
       io.emit('orders-updated', allOrders);
-
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
-
       if (callback) callback({ success: true, orderId: orderId });
     } catch (error) {
       console.error('Error placing order:', error);
@@ -385,7 +393,6 @@ io.on('connection', (socket) => {
         orders = orders.map(o => o.id === orderId ? { ...o, status: 'sent' } : o);
         saveJSON(ordersFile, orders);
       }
-
       let allOrders;
       if (isConnected && !useFallback) {
         allOrders = await Order.find();
@@ -393,7 +400,6 @@ io.on('connection', (socket) => {
         allOrders = loadJSON(ordersFile);
       }
       io.emit('orders-updated', allOrders);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error marking sent:', error);
@@ -411,7 +417,6 @@ io.on('connection', (socket) => {
         orders = orders.filter(o => o.id !== orderId);
         saveJSON(ordersFile, orders);
       }
-
       let allOrders;
       if (isConnected && !useFallback) {
         allOrders = await Order.find();
@@ -419,10 +424,8 @@ io.on('connection', (socket) => {
         allOrders = loadJSON(ordersFile);
       }
       io.emit('orders-updated', allOrders);
-
       const stats = await calculateStorageStats();
       io.emit('storage-stats', stats);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error deleting order:', error);
@@ -440,7 +443,6 @@ io.on('connection', (socket) => {
         buyers.push(buyer);
         saveJSON(buyersFile, buyers);
       }
-
       let allBuyers;
       if (isConnected && !useFallback) {
         allBuyers = await Buyer.find();
@@ -448,7 +450,6 @@ io.on('connection', (socket) => {
         allBuyers = loadJSON(buyersFile);
       }
       io.emit('buyers-updated', allBuyers);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error adding buyer:', error);
@@ -466,7 +467,6 @@ io.on('connection', (socket) => {
         buyers = buyers.map(b => b.id === buyer.id ? buyer : b);
         saveJSON(buyersFile, buyers);
       }
-
       let allBuyers;
       if (isConnected && !useFallback) {
         allBuyers = await Buyer.find();
@@ -474,7 +474,6 @@ io.on('connection', (socket) => {
         allBuyers = loadJSON(buyersFile);
       }
       io.emit('buyers-updated', allBuyers);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error updating buyer:', error);
@@ -492,7 +491,6 @@ io.on('connection', (socket) => {
         buyers = buyers.filter(b => b.id !== buyerId);
         saveJSON(buyersFile, buyers);
       }
-
       let allBuyers;
       if (isConnected && !useFallback) {
         allBuyers = await Buyer.find();
@@ -500,7 +498,6 @@ io.on('connection', (socket) => {
         allBuyers = loadJSON(buyersFile);
       }
       io.emit('buyers-updated', allBuyers);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error deleting buyer:', error);
@@ -516,14 +513,10 @@ io.on('connection', (socket) => {
       } else {
         let settings = loadJSON(settingsFile);
         if (!Array.isArray(settings)) settings = [];
-        if (settings.length === 0) {
-          settings.push(newSettings);
-        } else {
-          settings[0] = { ...settings[0], ...newSettings };
-        }
+        if (settings.length === 0) settings.push(newSettings);
+        else settings[0] = { ...settings[0], ...newSettings };
         saveJSON(settingsFile, settings);
       }
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error updating settings:', error);
@@ -531,15 +524,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ===== ADD CATEGORY (FIXED) =====
+  // ===== ADD CATEGORY (FIXED - broadcasts to all clients) =====
   socket.on('add-category', async (category, callback) => {
     try {
+      // Check for duplicate
       if (isConnected && !useFallback) {
+        const existing = await Category.findOne({ name: category.name });
+        if (existing) {
+          if (callback) callback({ success: true, message: 'Category already exists' });
+          return;
+        }
         await Category.create(category);
       } else {
         let categories = loadJSON(categoriesFile);
-        categories.push(category);
-        saveJSON(categoriesFile, categories);
+        const exists = categories.some(c => (c.name || c) === category.name);
+        if (!exists) {
+          categories.push(category);
+          saveJSON(categoriesFile, categories);
+        }
       }
 
       // Broadcast updated categories to ALL clients
@@ -567,7 +569,6 @@ io.on('connection', (socket) => {
       if (isConnected && !useFallback) {
         await Category.updateMany({ name: oldName }, { name: newName });
         await Product.updateMany({ cat: oldName }, { cat: newName });
-        
         const existingSettings = await Settings.findOne();
         if (existingSettings && existingSettings.categories) {
           const newCats = existingSettings.categories.map(c => c === oldName ? newName : c);
@@ -583,11 +584,9 @@ io.on('connection', (socket) => {
           return c.name === oldName ? { ...c, name: newName } : c;
         });
         saveJSON(categoriesFile, categories);
-        
         let products = loadJSON(productsFile);
         products = products.map(p => p.cat === oldName ? { ...p, cat: newName } : p);
         saveJSON(productsFile, products);
-        
         let settingsArr = loadJSON(settingsFile);
         if (Array.isArray(settingsArr) && settingsArr[0] && settingsArr[0].categories) {
           settingsArr[0].categories = settingsArr[0].categories.map(c => c === oldName ? newName : c);
@@ -595,6 +594,7 @@ io.on('connection', (socket) => {
         }
       }
 
+      // Broadcast fresh data to all clients
       let allProducts, allOrders, allBuyers, allCategories, allSettings;
       if (isConnected && !useFallback) {
         allProducts = await Product.find();
@@ -612,10 +612,8 @@ io.on('connection', (socket) => {
       }
       
       io.emit('init', {
-        products: allProducts || [],
-        orders: allOrders || [],
-        buyers: allBuyers || [],
-        categories: allCategories || [],
+        products: allProducts || [], orders: allOrders || [],
+        buyers: allBuyers || [], categories: allCategories || [],
         settings: allSettings || { whatsapp: '', email: '', phone: '', categories: [] }
       });
       
@@ -637,7 +635,6 @@ io.on('connection', (socket) => {
         categories = categories.filter(c => c.name !== categoryName);
         saveJSON(categoriesFile, categories);
       }
-
       let allCategories;
       if (isConnected && !useFallback) {
         allCategories = await Category.find();
@@ -645,7 +642,6 @@ io.on('connection', (socket) => {
         allCategories = loadJSON(categoriesFile);
       }
       io.emit('categories-updated', allCategories);
-
       if (callback) callback({ success: true });
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -665,4 +661,5 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📊 Storage: ${isConnected ? 'MongoDB Atlas' : 'JSON Fallback'}`);
+  console.log(`🌙 Sleep mode: ${SLEEP_START}:00 AM - ${SLEEP_END}:00 AM IST`);
 });
